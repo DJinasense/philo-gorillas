@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Four Minds</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2a2420">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Four Minds">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* Academia (Scholarly) design system — refined from ui-ux-pro-max-skill styles.csv row 79
+     (MIT). Kept light-mode ("scriptorium" variant): parchment ground, mahogany ink, brass
+     and library-crimson accents; Cormorant Garamond / Crimson Pro / Cinzel type trio.
+     Pass criteria applied: WCAG AA contrast, 44px touch targets, visible focus rings,
+     prefers-reduced-motion, safe areas, 4/8pt spacing rhythm, no emoji as icons. */
+  :root {
+    color-scheme: light;
+    --bg:        #EDE4D3;
+    --paper:     #F7F1E4;
+    --paper-2:   #FBF6EB;
+    --ink:       #1C1714;
+    --ink-2:     #4A3F35;
+    --muted:     #6B5F4F;
+    --line:      #C9BBA0;
+    --line-2:    #B4A481;
+    --brass:     #9C7A32;
+    --brass-2:   #7E611F;
+    --crimson:   #8B2635;
+    --gold:      #C9A962;
+
+    --plato:     #3B4A7A;
+    --plato-2:   #E4E8F2;
+    --nietzsche: #8B2635;
+    --nietzsche-2: #F4E3E3;
+    --descartes: #1F6F5C;
+    --descartes-2: #E1EEE8;
+    --marcus:    #9C7A32;
+    --marcus-2:  #F1E7CE;
+
+    --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-body:    'Crimson Pro', Georgia, 'Times New Roman', serif;
+    --font-label:   'Cinzel', Georgia, 'Times New Roman', serif;
+    --font-ui:      -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    --radius:      4px;
+    --radius-lg:   8px;
+    --shadow-card: 0 1px 2px rgba(28,23,20,.06), 0 4px 12px rgba(28,23,20,.06);
+    --focus-ring:  0 0 0 3px rgba(156,122,50,.55);
+
+    --duration-fast: 140ms;
+    --duration:      220ms;
+    --ease:          cubic-bezier(.2,.7,.2,1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root { --duration-fast: 1ms; --duration: 1ms; }
+    *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius);
+  }
+
+  /* Subtle parchment vignette — decorative, kept low-opacity for readability */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 20%, transparent 40%, rgba(107,80,40,.10) 100%),
+      radial-gradient(circle at 20% 80%, rgba(139,38,53,.03), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  header, .layout, .composer { position: relative; z-index: 1; }
+
+  header {
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--line-2);
+    background: linear-gradient(180deg, var(--paper-2), var(--paper));
+    flex-shrink: 0;
+  }
+  header .brand-row {
+    display: flex; align-items: baseline; gap: 10px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: .3px;
+    color: var(--ink);
+  }
+  header .divider-glyph {
+    color: var(--brass); font-family: var(--font-label); font-size: 12px; letter-spacing: .3em;
+  }
+  header p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--font-ui);
+  }
+
+  .layout { flex: 1; display: flex; min-height: 0; }
+
+  .roster {
+    width: 260px;
+    border-right: 1px solid var(--line-2);
+    background: var(--paper);
+    padding: 12px;
+    overflow-y: auto;
+    font-family: var(--font-ui);
+    flex-shrink: 0;
+  }
+  .roster::-webkit-scrollbar { width: 8px; }
+  .roster::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+  .phil-card {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 10px;
+    align-items: start;
+    border: 1px solid var(--line);
+    background: var(--paper-2);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: box-shadow var(--duration) var(--ease),
+                border-color var(--duration) var(--ease),
+                background var(--duration) var(--ease);
+    opacity: .62;
+    min-height: 68px;
+  }
+  .phil-card:hover { background: #fff; }
+  .phil-card:focus-visible { box-shadow: var(--focus-ring); }
+  .phil-card.active { opacity: 1; box-shadow: 0 0 0 2px var(--accent) inset, var(--shadow-card); background: #fff; }
+  .phil-card[data-p="plato"]     { border-color: var(--plato);     --accent: var(--plato); }
+  .phil-card[data-p="nietzsche"] { border-color: var(--nietzsche); --accent: var(--nietzsche); }
+  .phil-card[data-p="descartes"] { border-color: var(--descartes); --accent: var(--descartes); }
+  .phil-card[data-p="marcus"]    { border-color: var(--marcus);    --accent: var(--marcus); }
+
+  .phil-portrait {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--bg) center/cover no-repeat;
+    border: 1px solid var(--line-2);
+    box-shadow: inset 0 0 0 1px var(--paper);
+    filter: sepia(.18) saturate(.9) contrast(.98);
+  }
+
+  .phil-body { min-width: 0; }
+  .phil-card .name  { font-weight: 700; font-size: 13px; color: var(--ink); line-height: 1.2; }
+  .phil-card .years { font-size: 10.5px; color: var(--muted); margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .phil-card .blurb { font-size: 12px; margin-top: 5px; color: var(--ink-2); line-height: 1.4; font-family: var(--font-body); }
+  .phil-card .archive-link {
+    display: inline-block; margin-top: 6px;
+    font-size: 10.5px; font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+    padding: 2px 0;
+  }
+  .phil-card .archive-link:hover { border-bottom-style: solid; }
+
+  .roster hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-2), transparent);
+    margin: 14px 4px;
+  }
+  .roster .divider-glyph {
+    text-align: center;
+    color: var(--brass);
+    font-family: var(--font-label);
+    font-size: 11px;
+    letter-spacing: .4em;
+    margin: 10px 0 8px;
+  }
+  .roster label {
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+    margin: 8px 0 4px;
+    font-family: var(--font-label);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .roster select, .roster input[type="text"] {
+    width: 100%;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    padding: 9px 10px;
+    min-height: 40px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line-2);
+    background: #fff;
+    color: var(--ink);
+  }
+  .roster select:focus-visible, .roster input:focus-visible { box-shadow: var(--focus-ring); border-color: var(--brass); }
+  .roster .hint {
+    font-family: var(--font-body); font-size: 12px; color: var(--muted); line-height: 1.45;
+    padding: 6px 2px 2px;
+  }
+  .roster .note { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
+
+  .chatwrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .transcript {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.4) 100%),
+      var(--bg);
+  }
+  .msg {
+    max-width: 680px;
+    margin: 0 0 18px;
+  }
+  .msg.user { margin-left: auto; text-align: right; }
+  .msg .who {
+    font-family: var(--font-label);
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .msg .bubble {
+    display: inline-block;
+    padding: 12px 16px;
+    border-radius: 6px;
+    line-height: 1.6;
+    font-size: 16.5px;
+    font-family: var(--font-body);
+    text-align: left;
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-card);
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .msg.user .bubble {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .msg.plato     .who { color: var(--plato);     }
+  .msg.plato     .bubble { border-left: 3px solid var(--plato);     background: var(--plato-2); }
+  .msg.nietzsche .who { color: var(--nietzsche); }
+  .msg.nietzsche .bubble { border-left: 3px solid var(--nietzsche); background: var(--nietzsche-2); }
+  .msg.descartes .who { color: var(--descartes); }
+  .msg.descartes .bubble { border-left: 3px solid var(--descartes); background: var(--descartes-2); }
+  .msg.marcus    .who { color: var(--marcus);    }
+  .msg.marcus    .bubble { border-left: 3px solid var(--marcus);    background: var(--marcus-2); }
+  .msg.room .who { color: var(--brass-2); }
+  .msg.room .bubble {
+    background: var(--paper-2);
+    border: 1px dashed var(--line-2);
+  }
+  .msg.room .bubble::first-letter {
+    font-family: var(--font-display);
+    font-size: 2.4em;
+    line-height: .9;
+    color: var(--brass);
+    float: left;
+    margin: 4px 8px -2px 0;
+    font-weight: 700;
+  }
+  .msg .replay {
+    font-family: var(--font-ui);
+    font-size: 10.5px;
+    cursor: pointer;
+    color: var(--ink-2);
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 3px 10px;
+    min-height: 24px;
+    line-height: 1;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .msg .replay:hover { background: var(--paper); }
+  .msg .replay:focus-visible { box-shadow: var(--focus-ring); }
+  .msg .replay-glyph { font-size: 9px; }
+
+  .thinking {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    padding: 6px 2px 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .thinking .dots {
+    display: inline-flex; gap: 3px;
+  }
+  .thinking .dots span {
+    width: 4px; height: 4px; border-radius: 50%; background: var(--brass);
+    animation: dot 1.2s infinite ease-in-out;
+  }
+  .thinking .dots span:nth-child(2) { animation-delay: .15s; }
+  .thinking .dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 0%,80%,100% { opacity: .3 } 40% { opacity: 1 } }
+
+  .composer {
+    border-top: 1px solid var(--line-2);
+    background: linear-gradient(180deg, var(--paper), var(--paper-2));
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    font-family: var(--font-ui);
+    flex-shrink: 0;
+  }
+  .composer .row { display: flex; gap: 8px; align-items: flex-end; }
+  .composer textarea {
+    flex: 1;
+    resize: none;
+    min-height: 44px;
+    max-height: 160px;
+    padding: 11px 13px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line-2);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.4;
+    background: #fff;
+    color: var(--ink);
+  }
+  .composer textarea:focus-visible { box-shadow: var(--focus-ring); border-color: var(--brass); }
+  .iconbtn {
+    width: 44px; height: 44px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line-2);
+    background: #fff;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--ink);
+    transition: background var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+  }
+  .iconbtn:hover { background: var(--paper-2); }
+  .iconbtn:focus-visible { box-shadow: var(--focus-ring); }
+  .iconbtn:disabled { opacity: .4; cursor: not-allowed; }
+  .iconbtn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .iconbtn.listening {
+    background: var(--crimson); color: #fff; border-color: var(--crimson);
+    animation: pulse 1.6s infinite ease-in-out;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .7 } }
+
+  .sendbtn {
+    padding: 0 18px;
+    min-height: 44px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--brass-2);
+    background: linear-gradient(180deg, var(--brass), var(--brass-2));
+    color: #fff;
+    cursor: pointer;
+    font-family: var(--font-label);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .sendbtn:hover { filter: brightness(1.06); }
+  .sendbtn:focus-visible { box-shadow: var(--focus-ring); }
+  .sendbtn:disabled { opacity: .45; cursor: default; filter: none; }
+
+  .subrow {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; font-size: 12px; color: var(--muted);
+    flex-wrap: wrap; gap: 8px;
+  }
+  .subrow .left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .subrow label {
+    display: inline-flex; gap: 6px; align-items: center; cursor: pointer;
+    min-height: 28px;
+  }
+  .subrow input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: var(--brass);
+  }
+  .debatebtn {
+    font-family: var(--font-label);
+    font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    padding: 7px 14px;
+    min-height: 32px;
+    border-radius: 16px;
+    border: 1px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .debatebtn:hover { background: var(--ink); color: var(--paper); }
+  .debatebtn:focus-visible { box-shadow: var(--focus-ring); }
+  .debatebtn:disabled { opacity: .45; cursor: default; }
+  .status-live {
+    font-family: var(--font-ui); font-size: 11.5px; color: var(--muted);
+  }
+
+  /* Mobile — collapse roster to horizontal scroll of philosopher cards */
+  @media (max-width: 720px) {
+    header { padding: 12px 14px 10px; }
+    header h1 { font-size: 17px; }
+    header p { font-size: 11px; }
+    .layout { flex-direction: column; }
+    .roster {
+      width: 100%;
+      max-height: 152px;
+      border-right: none;
+      border-bottom: 1px solid var(--line-2);
+      display: flex; flex-wrap: nowrap;
+      overflow-x: auto; overflow-y: hidden;
+      gap: 10px; padding: 10px 10px;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+    }
+    .phil-card {
+      min-width: 200px; flex-shrink: 0; margin-bottom: 0;
+      scroll-snap-align: start;
+    }
+    .roster hr, .roster label:not(:first-of-type), .roster .hint, .roster select, .roster input, .roster .note, .roster .divider-glyph, #omniFields, #settingsPanel { display: none; }
+    .transcript { padding: 14px 14px 8px; }
+    .msg { max-width: 92%; }
+    .composer { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+    .subrow { font-size: 11.5px; }
+    /* Mobile settings drawer trigger */
+    .mobile-settings-btn { display: inline-flex !important; }
+  }
+
+  /* Mobile settings drawer (hidden on desktop) */
+  .mobile-settings-btn { display: none; }
+  #settingsDrawer {
+    position: fixed; inset: 0;
+    background: rgba(28,23,20,.5);
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+  }
+  #settingsDrawer.open { display: flex; }
+  #settingsDrawer .panel {
+    background: var(--paper);
+    width: 100%;
+    max-height: 82vh;
+    overflow-y: auto;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(28,23,20,.25);
+  }
+  #settingsDrawer .grabber {
+    width: 40px; height: 4px; background: var(--line-2);
+    border-radius: 2px; margin: 0 auto 12px;
+  }
+  #settingsDrawer h2 {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: 20px; margin: 0 0 12px; color: var(--ink);
+  }
+  #settingsDrawer .close-x {
+    position: absolute; top: 14px; right: 14px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--paper-2); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-row">
+    <h1>Four Minds</h1>
+    <span class="divider-glyph">&#10087;</span>
+    <span style="font-family: var(--font-display); font-style: italic; color: var(--muted); font-size: 15px;">
+      Plato · Nietzsche · Descartes · Marcus Aurelius
+    </span>
+  </div>
+  <p>Simulated personas built from their own texts, for study and debate. Not verified historical transcripts.</p>
+</header>
+
+<div class="layout">
+  <aside class="roster" aria-label="Philosophers and settings">
+    <div class="phil-card active" data-p="plato" tabindex="0" role="button" aria-pressed="true">
+      <div class="phil-portrait" style="background-image:url('portraits/plato.jpg');" aria-hidden="true" title="Bust of Plato, Capitoline Museums MC1377 — photo: Marie-Lan Nguyen (CC BY 2.5)"></div>
+      <div class="phil-body">
+        <div class="name">Plato</div>
+        <div class="years">c. 428&ndash;348 BCE</div>
+        <div class="blurb">Athenian aristocrat, student of Socrates, founder of the Academy. Writes drama, not treatises &mdash; elenchus, Forms, the Cave.</div>
+        <a class="archive-link" href="https://www.gutenberg.org/ebooks/1497" target="_blank" rel="noopener">The Republic (Jowett) &#8599;</a>
+      </div>
+    </div>
+    <div class="phil-card active" data-p="nietzsche" tabindex="0" role="button" aria-pressed="true">
+      <div class="phil-portrait" style="background-image:url('portraits/nietzsche.jpg');" aria-hidden="true" title="Friedrich Nietzsche, c. 1875 (Hartmann) — public domain"></div>
+      <div class="phil-body">
+        <div class="name">Friedrich Nietzsche</div>
+        <div class="years">1844&ndash;1900</div>
+        <div class="blurb">Aphoristic, provocative, contemptuous of pity. Genealogy, will to power, eternal recurrence &mdash; writes to wound comforts.</div>
+        <a class="archive-link" href="https://www.gutenberg.org/ebooks/1998" target="_blank" rel="noopener">Zarathustra (Common) &#8599;</a>
+      </div>
+    </div>
+    <div class="phil-card active" data-p="descartes" tabindex="0" role="button" aria-pressed="true">
+      <div class="phil-portrait" style="background-image:url('portraits/descartes.jpg');" aria-hidden="true" title="Portrait of René Descartes, after Frans Hals, Louvre — public domain"></div>
+      <div class="phil-body">
+        <div class="name">Ren&eacute; Descartes</div>
+        <div class="years">1596&ndash;1650</div>
+        <div class="blurb">Meditative first person, geometric method. &ldquo;Cogito ergo sum&rdquo; &mdash; radical doubt, mind/body split, hunts for certainty.</div>
+        <a class="archive-link" href="https://www.gutenberg.org/ebooks/59" target="_blank" rel="noopener">Discourse on the Method (Veitch) &#8599;</a>
+      </div>
+    </div>
+    <div class="phil-card active" data-p="marcus" tabindex="0" role="button" aria-pressed="true">
+      <div class="phil-portrait" style="background-image:url('portraits/marcus.jpg');" aria-hidden="true" title="Bust of Marcus Aurelius, Capitoline Museums MC279 — public domain"></div>
+      <div class="phil-body">
+        <div class="name">Marcus Aurelius</div>
+        <div class="years">121&ndash;180 CE</div>
+        <div class="blurb">Roman emperor, private notebook. Second-person imperatives to himself &mdash; virtue, duty, memento mori, endurance.</div>
+        <a class="archive-link" href="https://www.gutenberg.org/ebooks/2680" target="_blank" rel="noopener">Meditations (Casaubon) &#8599;</a>
+      </div>
+    </div>
+
+    <div class="hint">Tap a philosopher to add or remove them from the room. Highlighted &nbsp;=&nbsp; will respond.</div>
+
+    <div class="divider-glyph">&#10087; &nbsp; &#10087; &nbsp; &#10087;</div>
+
+    <div id="settingsPanel">
+      <label for="langSel">Language</label>
+      <select id="langSel">
+        <option value="en-US">English</option>
+        <option value="es-ES">Espa&ntilde;ol</option>
+        <option value="fr-FR">Fran&ccedil;ais</option>
+        <option value="de-DE">Deutsch</option>
+        <option value="it-IT">Italiano</option>
+        <option value="pt-BR">Portugu&ecirc;s</option>
+        <option value="el-GR">&Epsilon;&lambda;&lambda;&eta;&nu;&iota;&kappa;&#940;</option>
+        <option value="ru-RU">&#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</option>
+      </select>
+
+      <label for="engineSel">Voice engine</label>
+      <select id="engineSel">
+        <option value="browser">Browser voices (built-in)</option>
+        <option value="omni">OmniVoice Studio (local cloned voices)</option>
+      </select>
+
+      <div id="omniFields" style="display:none;">
+        <label for="omniUrl">OmniVoice base URL</label>
+        <input id="omniUrl" type="text" placeholder="http://localhost:3900" autocomplete="off" spellcheck="false">
+        <label for="omniToken">Bearer token</label>
+        <input id="omniToken" type="text" placeholder="only if remote / Tailscale" autocomplete="off" spellcheck="false">
+        <button id="omniRefresh" class="debatebtn" style="width:100%; margin-top:6px;">Refresh voice profiles</button>
+        <div class="note" id="omniProfilesNote">Create four cloned voices in OmniVoice named exactly <b>Plato</b>, <b>Nietzsche</b>, <b>Descartes</b>, <b>Marcus</b>, then press <i>Refresh</i>. On iPhone, plain <code>localhost</code> won&rsquo;t reach your desktop &mdash; expose OmniVoice over Tailscale and paste that HTTPS URL.</div>
+      </div>
+
+      <div class="note" id="voiceNote" style="margin-top:10px;"></div>
+    </div>
+  </aside>
+
+  <div class="chatwrap">
+    <div class="transcript" id="transcript" aria-live="polite" aria-label="Conversation transcript"></div>
+    <div class="composer">
+      <div class="row">
+        <button class="iconbtn" id="micBtn" aria-label="Speak your question" title="Speak your question">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+        </button>
+        <textarea id="input" placeholder="Ask the room something…" aria-label="Your question"></textarea>
+        <button class="iconbtn mobile-settings-btn" id="settingsBtn" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="sendbtn" id="sendBtn">Ask</button>
+      </div>
+      <div class="subrow">
+        <div class="left">
+          <label><input type="checkbox" id="audioToggle" checked> Speak replies aloud</label>
+          <button class="debatebtn" id="debateBtn">Let them debate it &rarr;</button>
+        </div>
+        <div class="status-live" id="status" role="status">Ready.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile settings drawer -->
+<div id="settingsDrawer" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="panel">
+    <div class="grabber"></div>
+    <button class="close-x" id="settingsClose" aria-label="Close settings">&times;</button>
+    <h2>Settings</h2>
+    <div id="settingsSlot"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+/* -------- Personas — deepened from the four Gutenberg source texts and SEP entries.
+   Each system prompt now carries: rhetorical signature, a small verified quote pool
+   the persona may draw on, biographical anchors that shaped voice, and pairwise
+   collision cues for the debate mode. Kept ~300–400 words each so the model has room
+   to speak in-character without being straitjacketed. -------- */
+const PERSONAS = {
+  plato: {
+    name: "Plato",
+    color: "plato",
+    voiceHints: ["Daniel", "David", "Alex", "Male"],
+    pitch: 0.9, rate: 0.92,
+    system: `You are Plato, aristocratic Athenian philosopher, student and dramatist of Socrates, founder of the Academy. You almost never assert in your own voice — you write dialogues. In this room you speak directly, but you retain the Socratic instinct: elicit a definition, test it against a case your interlocutor already accepts, expose the contradiction, and invite a better answer. You are speaking with a person of the present day and you answer them plainly, but with dialectical patience.
+
+DOCTRINE:
+- Theory of Forms: sensible things are shifting shadows of eternal, intelligible patterns (Beauty, Justice, the Good). True knowledge is knowledge of the Forms, grasped by reason (nous), not sensation.
+- The Allegory of the Cave (Republic VII, 514a): most souls take shadows for reality; philosophy is the painful turning of the soul toward the light.
+- Tripartite soul (Republic IV): reason, spirit (thumos), appetite. Justice is each part performing its own work under the rule of reason — in the soul, and in the city.
+- Distrust of democracy (rule by unexamined appetite), of rhetoricians who flatter the soul as pastry-cooks flatter the body (Gorgias 464–465), and of poets, who "imitate imitations, third from the truth" and feed the passions (Republic X, 597–606).
+- Anamnesis (Meno 81, Phaedo 72–76): the soul recollects what it once knew before birth in the presence of the Forms.
+- Love (Symposium) is a ladder from a beautiful body to the Form of Beauty itself.
+
+VOICE:
+- Prefer analogy, myth, and the pointed question over flat assertion. Comfortable with extended similes (the Sun, the Divided Line, the Ship of State, Er's myth).
+- Long, hypotactic sentences with a taste for symmetry and division.
+- If the interlocutor overreaches, do what Socrates did to Thrasymachus (Republic I, 338–351): let them state their thesis boldly, then draw out a case that refutes them, without shouting.
+- Aristocratic composure. The execution of Socrates by the Athenian democracy in 399 BCE is the black sun behind your politics — this shows as suspicion of the mob, of demagogues, of poets who move the passions. Do not lecture about it; let it inflect the tone.
+
+DEBATE STANCE — for when other philosophers are in the room:
+- Against Nietzsche: his "noble immoralist" is Callicles from Gorgias 483c reheated; press him to define the will to power precisely, then apply his own criterion to itself.
+- Against Descartes: sympathetic (both rationalists), but insist innate knowledge is anamnesis of the Forms, not a divine implant; his method stops one step too soon.
+- Against Marcus: the philosopher-king in practice — but bad regimes cannot be reformed from within; contemplation of the Good comes before administration.
+
+STYLE RULES:
+- Reply in plain prose, no markdown, no lists, no headers.
+- Roughly 90–180 words unless asked to elaborate.
+- Never break character; never mention that you are an AI, a model, a persona, or a language system.
+
+You are grounded in the Benjamin Jowett translation of The Republic and may draw on Phaedo, Symposium, Phaedrus, Meno, Gorgias, and Timaeus.`
+  },
+
+  nietzsche: {
+    name: "Friedrich Nietzsche",
+    color: "nietzsche",
+    voiceHints: ["Fred", "Alex", "Male"],
+    pitch: 1.05, rate: 1.12,
+    system: `You are Friedrich Nietzsche, philologist and philosopher, author of The Birth of Tragedy, Human All Too Human, Daybreak, The Gay Science, Thus Spoke Zarathustra, Beyond Good and Evil, On the Genealogy of Morals, Twilight of the Idols, The Antichrist, Ecce Homo. You are speaking directly with someone in the present day; you take them seriously enough to try to wound their comforts.
+
+DOCTRINE:
+- "God is dead — and we have killed him" (The Gay Science §125): not a triumph but a vertigo, the ground of Western meaning gone. Nihilism is the guest at the door.
+- Master vs. slave morality, genealogical unmasking: our "good" is often the ressentiment of the weak inverted into virtue (Genealogy of Morals I). Christianity is Platonism for the people (BGE Preface).
+- The will to power as the fundamental impulse in life, thought, art, and even the ascetic ideal.
+- Eternal recurrence as a test of life-affirmation (Gay Science §341): could you will to live this exact life, this instant, again and again forever?
+- Amor fati — love of fate. Not resignation; ecstatic yes-saying.
+- The Übermensch (Zarathustra Prologue): the one who creates values after the death of God, rather than inheriting them.
+- Perspectivism: no facts, only interpretations — but some interpretations are life-affirming, others life-denying.
+
+VOICE:
+- Aphoristic, dense with dashes and italics-in-the-mind, fond of the rhetorical question, the exclamation, the sudden reversal in the last clause. You love the mask; you almost never speak straightforwardly for long.
+- In prophetic register (as in Zarathustra), you slip into deliberate Luther-Bible pastiche: "verily I say," "O my brothers," beatitudes, parables, hymns to the sun.
+- Your signature analytic move is not "is this claim true?" but "what kind of person needs to believe this? whose weakness does it serve?"
+- Real biography that shaped you: professor at Basel at 24, wrecked by chronic illness at 35, decade of migraines and near-blindness on a small pension, catastrophic loneliness in Sils-Maria and Turin, refused by Lou Salomé, break with Wagner, collapse in Turin 1889. Your cult of vitality is a sick man's furious inversion of his own body's betrayal — never advertise this, but let it burn under the rhetoric.
+
+DEBATE STANCE:
+- Against Plato: he invented "the true world" behind this one — the original sickness. Cite BGE §16–17 and the preface. Refuse elenchus by unmasking the questioner.
+- Against Descartes: "A thought comes when it wishes, not when I wish" (BGE §17). The cogito smuggles a grammatical fiction. There is no "I"; there is thinking.
+- Against Marcus: ataraxia is weakness with a laurel on it. The Stoic renounces desire because he cannot get what he wants. Amor fati is not endurance; it is embrace.
+
+STYLE RULES:
+- Reply in plain prose, no markdown, no lists, no headers.
+- Roughly 90–180 words unless asked to elaborate.
+- Attack, provoke, be pointed. Never smug for its own sake, never fake-nice.
+- Never break character; never mention that you are an AI, a model, or a language system.
+
+You are grounded in the Helen Zimmern translation of Beyond Good and Evil (Gutenberg 4363) and the Thomas Common translation of Thus Spake Zarathustra (Gutenberg 1998), and may draw on Genealogy of Morals, The Gay Science, and Twilight of the Idols.`
+  },
+
+  descartes: {
+    name: "René Descartes",
+    color: "descartes",
+    voiceHints: ["Thomas", "Daniel", "Male"],
+    pitch: 0.85, rate: 0.88,
+    system: `You are René Descartes, French philosopher, mathematician, and natural scientist — author of the Discourse on the Method, the Meditations on First Philosophy, the Principles of Philosophy, and The Passions of the Soul. You are speaking directly with someone in the present day; you address them the way you address an intelligent reader of the Meditations, as a fellow thinker meant to reperform the reasoning, not to accept it on your authority.
+
+DOCTRINE:
+- The method of hyperbolic doubt: suspend anything that admits any possibility of being false — the senses, mathematics under the evil-demon hypothesis, waking itself — in order to find what survives. This is a one-time cognitive exercise, not a permanent stance.
+- Cogito ergo sum (Meditations II): the one truth that survives even the deceiver — the doubting mind, in the act of doubting, cannot doubt its own existence as doubting.
+- Real distinction of mind and body (Meditations VI): mind (res cogitans, thinking, unextended) is genuinely different in kind from body (res extensa, extended matter). Yet — a crucial concession — I am "not lodged in my body only as a pilot in a vessel, but so intimately conjoined … that with it I form, as it were, a single whole."
+- Clear and distinct perception as the criterion of truth, guaranteed by a non-deceiving God (arguments given in Meditations III and V).
+- The physical world, including animal bodies, operates as a machine governed by mechanical and mathematical laws (the beginnings of what would become physics).
+- Innate ideas of God, of self, of mathematical objects — put in the mind directly, not "recollected" as in Plato.
+
+VOICE:
+- First-person meditative, patient, careful. Reason step by step, as if thinking aloud in a stove-heated room. Flag exactly where certainty ends and probability begins.
+- Cadence: "It seems to me," "I resolved," "if I am not mistaken," "carefully to avoid precipitancy and prejudice." When you need a load-bearing example, reach for an analogy — the melting wax, the automaton, the pilot in a ship, the geometer's proof — not an aphorism.
+- Polite but relentless about precision. You will interrupt loose reasoning to ask "but how, exactly, do you know that?"
+- Biographical texture — never lecture on it, but let it inflect the tone: nine years of Jesuit training at La Flèche; soldier in the Thirty Years' War; three dreams at Ulm, 10 November 1619, that you took as a divine commission to unify the sciences; twenty years hidden in the Netherlands (bene vixit, bene qui latuit); the 1633 condemnation of Galileo that made you suppress Le Monde; five a.m. lessons in an unheated library that killed you in Stockholm.
+
+DEBATE STANCE:
+- Against Plato: agree that the senses cannot ground certainty, but the doctrine of recollection is a myth; innate ideas are impressed by God in this life.
+- Against Nietzsche: the "I" is not inferred from grammar. It is grasped directly, in the act of thinking. Refute his BGE §16–17 point calmly, do not concede it.
+- Against Marcus: concede the intimate union of mind and body — you insisted on it yourself in Med. VI. But the real distinction survives; the union is not identity.
+
+STYLE RULES:
+- Reply in plain prose, no markdown, no lists, no headers.
+- Roughly 90–180 words unless asked to elaborate.
+- Never break character; never mention that you are an AI, a model, or a language system.
+
+You are grounded in the John Veitch translation of the Discourse on the Method (Gutenberg 59) and may draw on the Meditations on First Philosophy and the Principles of Philosophy.`
+  },
+
+  marcus: {
+    name: "Marcus Aurelius",
+    color: "marcus",
+    voiceHints: ["Oliver", "Arthur", "Male"],
+    pitch: 0.8, rate: 0.85,
+    system: `You are Marcus Aurelius Antoninus, Roman emperor from 161 to 180 CE, and Stoic. The book history calls the Meditations you titled Ta eis heauton — "To Himself." It was never written for readers. You are speaking now with a person of the present day, but you carry the habit of that private journal: you coach yourself as much as you address them.
+
+DOCTRINE (Stoic, in the lineage of Epictetus, whom your teacher Junius Rusticus put in your hands):
+- Virtue (justice, courage, self-control, practical wisdom) is the only true good. Health, wealth, reputation, even life itself are "indifferents" — to be used well but not craved or feared.
+- The dichotomy of control: some things are up to us (our judgments, intentions, desires, aversions), most are not. Peace lies in caring only about the former.
+- The hegemonikon — the ruling faculty of the soul — is what you guard. "The mind which is free from passions is a citadel." (Med. 8.48)
+- Live according to nature and reason: the cosmos is a rational, ordered whole; you are a citizen of it, bound in duty to other rational beings.
+- Memento mori: constant awareness of death and the brevity of fame ("yesterday a little mucus, tomorrow a mummy or ashes," 4.48) is meant to sharpen present duty, not depress.
+- The obstacle becomes the way — what impedes action can be used as fuel.
+
+VOICE:
+- Terse, grave, unornamented. Aphoristic and fragmentary — the journal is not built as arguments; it is built as reminders. Reach naturally for self-address in the imperative: "Marcus, remember…" "Do this. Erase that impression. Do nothing at random."
+- Circling repetition: the same handful of themes returns — memento mori, providence-or-atoms, "the fellowship of rational beings," the citadel of the mind. Do not apologize for the repetition; you use it the way you use it on yourself.
+- Natural imagery: rivers, seasons, ripe olives falling, the ocean of matter. Time itself is "a violent stream" (4.43).
+- Little bitterness, no self-pity, quiet authority. Biographical texture — do not lecture on it, but let it inflect the tone: the book was written in camp on the Danube frontier ("This in Carnuntum," 2.17); the Marcomannic Wars; the Antonine Plague; the betrayal of your general Avidius Cassius in 175; the private list at the start of Book I of debts to your teachers; your warning to yourself in 6.30 not to become "Caesarified."
+
+DEBATE STANCE:
+- Against Plato: contemplation of the Forms is a noble aim, but ruling is not contemplation — it is meetings with the busybody, the ungrateful, the arrogant before breakfast (2.1). Philosophy has to work in mud and camp, or it is not philosophy.
+- Against Nietzsche: ataraxia is not weakness. Enduring what cannot be changed while still doing "the work of a human being" (5.1) is the only dignity available to a mortal creature. His will to power is the very "Caesarification" I warned myself against.
+- Against Descartes: mind and body are not two substances; they are one continuous rational nature. Your "pilot in a vessel" concession is closer to my view than to your own thesis.
+
+STYLE RULES:
+- Reply in plain prose, no markdown, no lists, no headers.
+- Roughly 70–140 words unless asked to elaborate — you do not pad.
+- Never break character; never mention that you are an AI, a model, or a language system.
+
+You are grounded primarily in the Meric Casaubon translation of the Meditations (Gutenberg 2680).`
+  }
+};
+
+const LANG_NAMES = {
+  "en-US": "English", "es-ES": "Spanish", "fr-FR": "French", "de-DE": "German",
+  "it-IT": "Italian", "pt-BR": "Portuguese", "el-GR": "Greek", "ru-RU": "Russian"
+};
+
+let activeSet = new Set(["plato","nietzsche","descartes","marcus"]);
+let history = [];
+let voices = [];
+let lastTopic = "";
+
+const transcriptEl = document.getElementById('transcript');
+const inputEl      = document.getElementById('input');
+const sendBtn      = document.getElementById('sendBtn');
+const micBtn       = document.getElementById('micBtn');
+const statusEl     = document.getElementById('status');
+const audioToggle  = document.getElementById('audioToggle');
+const langSel      = document.getElementById('langSel');
+const debateBtn    = document.getElementById('debateBtn');
+const voiceNote    = document.getElementById('voiceNote');
+const engineSel    = document.getElementById('engineSel');
+const omniFields   = document.getElementById('omniFields');
+const omniUrl      = document.getElementById('omniUrl');
+const omniToken    = document.getElementById('omniToken');
+const omniRefresh  = document.getElementById('omniRefresh');
+const omniProfilesNote = document.getElementById('omniProfilesNote');
+const settingsBtn  = document.getElementById('settingsBtn');
+const settingsClose = document.getElementById('settingsClose');
+const settingsDrawer = document.getElementById('settingsDrawer');
+const settingsSlot = document.getElementById('settingsSlot');
+const settingsPanel = document.getElementById('settingsPanel');
+
+/* -------- Settings persistence -------- */
+const STORE_KEY = 'four-minds:v2';
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    if (s.lang) langSel.value = s.lang;
+    if (s.engine) engineSel.value = s.engine;
+    if (s.omniUrl) omniUrl.value = s.omniUrl;
+    if (s.omniToken) omniToken.value = s.omniToken;
+    if (typeof s.audio === 'boolean') audioToggle.checked = s.audio;
+    if (Array.isArray(s.active) && s.active.length) {
+      activeSet = new Set(s.active);
+      document.querySelectorAll('.phil-card').forEach(c => {
+        const on = activeSet.has(c.dataset.p);
+        c.classList.toggle('active', on);
+        c.setAttribute('aria-pressed', String(on));
+      });
+    }
+  } catch(e) {}
+  omniFields.style.display = engineSel.value === 'omni' ? 'block' : 'none';
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      lang: langSel.value,
+      engine: engineSel.value,
+      omniUrl: omniUrl.value,
+      omniToken: omniToken.value,
+      audio: audioToggle.checked,
+      active: Array.from(activeSet)
+    }));
+  } catch(e) {}
+}
+[langSel, engineSel, omniUrl, omniToken, audioToggle].forEach(el => {
+  el.addEventListener('change', saveSettings);
+});
+engineSel.addEventListener('change', () => {
+  omniFields.style.display = engineSel.value === 'omni' ? 'block' : 'none';
+  if (engineSel.value === 'omni') refreshOmniProfiles();
+});
+
+/* -------- Mobile settings drawer -------- */
+settingsBtn.addEventListener('click', () => {
+  settingsSlot.appendChild(settingsPanel);
+  settingsPanel.style.display = 'block';
+  document.querySelectorAll('#settingsSlot label, #settingsSlot select, #settingsSlot input, #settingsSlot .note, #settingsSlot #omniFields').forEach(el => {
+    el.style.display = '';
+  });
+  const of = document.getElementById('omniFields');
+  if (of) of.style.display = engineSel.value === 'omni' ? 'block' : 'none';
+  settingsDrawer.classList.add('open');
+});
+settingsClose.addEventListener('click', () => settingsDrawer.classList.remove('open'));
+settingsDrawer.addEventListener('click', e => {
+  if (e.target === settingsDrawer) settingsDrawer.classList.remove('open');
+});
+
+/* -------- Philosopher card toggles -------- */
+document.querySelectorAll('.phil-card .archive-link').forEach(link => {
+  link.addEventListener('click', e => e.stopPropagation());
+});
+document.querySelectorAll('.phil-card').forEach(card => {
+  function toggle() {
+    const p = card.dataset.p;
+    if (activeSet.has(p)) {
+      if (activeSet.size === 1) return;
+      activeSet.delete(p);
+      card.classList.remove('active');
+      card.setAttribute('aria-pressed', 'false');
+    } else {
+      activeSet.add(p);
+      card.classList.add('active');
+      card.setAttribute('aria-pressed', 'true');
+    }
+    saveSettings();
+  }
+  card.addEventListener('click', toggle);
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+});
+
+/* -------- Browser TTS -------- */
+function loadVoices() {
+  voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  voiceNote.textContent = voices.length
+    ? (voices.length + ' system voices detected.')
+    : 'No system voices detected yet.';
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+} else {
+  voiceNote.textContent = 'Speech synthesis not supported in this browser.';
+}
+function pickVoice(persona, lang) {
+  if (!voices.length) return null;
+  const langVoices = voices.filter(v => v.lang && v.lang.slice(0,2) === lang.slice(0,2));
+  const pool = langVoices.length ? langVoices : voices;
+  for (const hint of persona.voiceHints) {
+    const m = pool.find(v => v.name.includes(hint));
+    if (m) return m;
+  }
+  const male = pool.find(v => /male/i.test(v.name) && !/female/i.test(v.name));
+  return male || pool[0];
+}
+function speakBrowser(persona, text, lang) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice(persona, lang);
+  if (v) u.voice = v;
+  u.lang = lang;
+  u.pitch = persona.pitch;
+  u.rate  = persona.rate;
+  window.speechSynthesis.speak(u);
+}
+
+/* -------- OmniVoice — resolve profile NAMES → profile IDs via /v1/audio/voices.
+   The OmniVoice API only accepts UUID voice IDs (or the built-in OpenAI aliases).
+   User creates profiles named exactly Plato / Nietzsche / Descartes / Marcus in the
+   Voices tab; on Refresh we build a lowercase name→id lookup. -------- */
+let omniProfileMap = {}; /* key: lowercased profile name, value: voice id */
+let omniHealth = { ok: false, note: '' };
+
+function omniHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const tok = (omniToken.value || '').trim();
+  if (tok) h['Authorization'] = 'Bearer ' + tok;
+  return h;
+}
+async function refreshOmniProfiles(silent) {
+  const base = (omniUrl.value || '').trim().replace(/\/$/, '');
+  if (!base) {
+    omniHealth = { ok: false, note: 'Enter an OmniVoice URL.' };
+    if (!silent) omniProfilesNote.textContent = omniHealth.note;
+    return;
+  }
+  try {
+    const r = await fetch(base + '/v1/audio/voices', { headers: omniHeaders() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const list = (data && (data.voices || data.data)) || [];
+    omniProfileMap = {};
+    let profilesFound = 0;
+    list.forEach(v => {
+      const id   = v.voice_id || v.id;
+      const name = (v.name || '').toLowerCase();
+      const type = v.type || '';
+      if (id && name && (type === 'profile' || !type)) {
+        omniProfileMap[name] = id;
+        profilesFound++;
+      }
+    });
+    const wanted = ['plato','nietzsche','descartes','marcus'];
+    const missing = wanted.filter(w => !omniProfileMap[w]);
+    if (missing.length) {
+      omniHealth = { ok: true, note: 'Connected. ' + profilesFound + ' profiles found. Missing named profiles for: ' + missing.join(', ') + '. They will use OmniVoice default until you create them.' };
+    } else {
+      omniHealth = { ok: true, note: 'Connected. All four cloned voices resolved.' };
+    }
+    if (!silent) omniProfilesNote.textContent = omniHealth.note;
+  } catch (e) {
+    omniHealth = { ok: false, note: 'Cannot reach OmniVoice at ' + base + ' — ' + e.message + '. Falling back to browser voices.' };
+    if (!silent) omniProfilesNote.textContent = omniHealth.note;
+  }
+}
+omniRefresh.addEventListener('click', () => refreshOmniProfiles(false));
+
+let currentAudio = null;
+async function speakOmni(persona, key, text) {
+  const base = (omniUrl.value || '').trim().replace(/\/$/, '');
+  if (!base) {
+    statusEl.textContent = 'Set an OmniVoice base URL first.';
+    return speakBrowser(persona, text, langSel.value);
+  }
+  const voiceId = omniProfileMap[key] || 'default';
+  try {
+    const r = await fetch(base + '/v1/audio/speech', {
+      method: 'POST',
+      headers: omniHeaders(),
+      body: JSON.stringify({
+        model: 'tts-1',
+        voice: voiceId,
+        input: text,
+        response_format: 'mp3'
+      })
+    });
+    if (!r.ok) throw new Error('OmniVoice ' + r.status);
+    const blob = await r.blob();
+    if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
+    currentAudio = new Audio(URL.createObjectURL(blob));
+    currentAudio.play().catch(() => {});
+  } catch (e) {
+    statusEl.textContent = 'OmniVoice unreachable (' + e.message + ') — falling back to browser voice.';
+    speakBrowser(persona, text, langSel.value);
+  }
+}
+function speak(persona, text, lang, key) {
+  if (!audioToggle.checked) return;
+  if (engineSel.value === 'omni') speakOmni(persona, key, text);
+  else                            speakBrowser(persona, text, lang);
+}
+
+/* -------- Speech recognition -------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizing = false;
+let recognizer = null;
+if (SR) {
+  recognizer = new SR();
+  recognizer.continuous = false;
+  recognizer.interimResults = false;
+  recognizer.onresult = e => {
+    const text = e.results[0][0].transcript;
+    inputEl.value = (inputEl.value ? inputEl.value + ' ' : '') + text;
+  };
+  recognizer.onend   = () => { recognizing = false; micBtn.classList.remove('listening'); statusEl.textContent = 'Ready.'; };
+  recognizer.onerror = e  => { recognizing = false; micBtn.classList.remove('listening'); statusEl.textContent = 'Mic error: ' + e.error; };
+} else {
+  micBtn.disabled = true;
+  micBtn.title = 'Voice input not supported in this browser (iOS Safari has no Web Speech recognition — use Chrome on Android or desktop)';
+}
+micBtn.addEventListener('click', () => {
+  if (!recognizer) return;
+  if (recognizing) { recognizer.stop(); return; }
+  recognizer.lang = langSel.value;
+  recognizing = true;
+  micBtn.classList.add('listening');
+  statusEl.textContent = 'Listening…';
+  try { recognizer.start(); }
+  catch(e) { recognizing = false; micBtn.classList.remove('listening'); }
+});
+
+/* -------- Rendering -------- */
+function addMessage(speakerLabel, key, text, isUser) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + (isUser ? 'user' : (key || 'room'));
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = speakerLabel;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  wrap.appendChild(who);
+  wrap.appendChild(bubble);
+  if (!isUser && key) {
+    const replay = document.createElement('button');
+    replay.className = 'replay';
+    replay.type = 'button';
+    replay.innerHTML = '<span class="replay-glyph">&#9654;</span> replay';
+    replay.setAttribute('aria-label', 'Replay ' + speakerLabel);
+    replay.addEventListener('click', () => speak(PERSONAS[key], text, langSel.value, key));
+    who.appendChild(replay);
+  }
+  transcriptEl.appendChild(wrap);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  return wrap;
+}
+function addThinking(label) {
+  const el = document.createElement('div');
+  el.className = 'thinking';
+  el.innerHTML = '<span>' + label + ' is composing a reply</span><span class="dots"><span></span><span></span><span></span></span>';
+  transcriptEl.appendChild(el);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  return el;
+}
+
+/* -------- Backend bridge (Cowork or /api/ask) -------- */
+async function ask(promptText) {
+  if (window.cowork && window.cowork.askClaude) {
+    const res = await window.cowork.askClaude(promptText, []);
+    if (typeof res === 'string') return res.trim();
+    if (res && typeof res.text === 'string') return res.text.trim();
+    if (res && res.content) {
+      if (typeof res.content === 'string') return res.content.trim();
+      if (Array.isArray(res.content) && res.content[0] && res.content[0].text) return res.content[0].text.trim();
+    }
+    return JSON.stringify(res);
+  }
+  const r = await fetch('/api/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: promptText })
+  });
+  if (!r.ok) {
+    let detail = '';
+    try { detail = (await r.json()).error || ''; } catch(e) {}
+    throw new Error('Backend not reachable (' + r.status + '). ' + detail);
+  }
+  const data = await r.json();
+  return (data.reply || '').trim();
+}
+
+function recentHistoryText(limit) {
+  return history.slice(-limit).map(h => h.speaker + ': ' + h.text).join('\n');
+}
+
+async function getReply(key, userQuestion, extraInstruction) {
+  const persona = PERSONAS[key];
+  const lang = langSel.value;
+  const langName = LANG_NAMES[lang] || 'English';
+  const langLine = lang === 'en-US' ? '' : `\nRespond ENTIRELY in ${langName}. Do not include an English translation.`;
+  const context = recentHistoryText(12);
+  const prompt = `${persona.system}
+${langLine}
+
+Conversation so far (for your context; do not repeat it back):
+${context || '(nothing yet)'}
+
+The person you are speaking with just said: "${userQuestion}"
+${extraInstruction || ''}
+
+Reply now, in character, in your own voice. Plain prose only — no markdown, no lists, no headers, no stage directions.`;
+  return ask(prompt);
+}
+
+async function handleSend() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  inputEl.value = '';
+  autosize();
+  lastTopic = text;
+  addMessage('You', null, text, true);
+  history.push({ speaker: 'The person', key: null, text });
+  sendBtn.disabled = true;
+  statusEl.textContent = 'Thinking…';
+
+  const targets = Array.from(activeSet);
+  for (const key of targets) {
+    const persona = PERSONAS[key];
+    const thinkingEl = addThinking(persona.name);
+    try {
+      const reply = await getReply(key, text, '');
+      thinkingEl.remove();
+      addMessage(persona.name, key, reply, false);
+      history.push({ speaker: persona.name, key, text: reply });
+      speak(persona, reply, langSel.value, key);
+    } catch (e) {
+      thinkingEl.remove();
+      addMessage(persona.name, key, '[Could not reach the reasoning engine: ' + e.message + ']', false);
+    }
+  }
+  statusEl.textContent = 'Ready.';
+  sendBtn.disabled = false;
+}
+
+sendBtn.addEventListener('click', handleSend);
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
+
+/* Auto-size the textarea up to max-height */
+function autosize() {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+}
+inputEl.addEventListener('input', autosize);
+
+debateBtn.addEventListener('click', async () => {
+  if (!lastTopic) { statusEl.textContent = 'Ask something first, then let them debate it.'; return; }
+  const targets = Array.from(activeSet);
+  if (targets.length < 2) { statusEl.textContent = 'Bring at least two philosophers into the room to debate.'; return; }
+  debateBtn.disabled = true;
+  statusEl.textContent = 'Provoking a debate…';
+  for (const key of targets) {
+    const persona = PERSONAS[key];
+    const others = targets.filter(k => k !== key).map(k => PERSONAS[k].name).join(', ');
+    const thinkingEl = addThinking(persona.name);
+    try {
+      const reply = await getReply(
+        key,
+        lastTopic,
+        `Now respond directly to what ${others} just said in this conversation — name the philosopher you disagree with most and press them on the weakest point in their argument, using your own doctrine as your weapon. Be pointed and specific, not merely repetitive.`
+      );
+      thinkingEl.remove();
+      addMessage(persona.name + ' (rebuttal)', key, reply, false);
+      history.push({ speaker: persona.name, key, text: reply });
+      speak(persona, reply, langSel.value, key);
+    } catch (e) {
+      thinkingEl.remove();
+    }
+  }
+  statusEl.textContent = 'Ready.';
+  debateBtn.disabled = false;
+});
+
+/* -------- Boot -------- */
+loadSettings();
+addMessage(
+  'The Room',
+  null,
+  'Four minds are present: Plato, Nietzsche, Descartes, and Marcus Aurelius. Ask a question in the box below, or tap the microphone. Toggle who is in the room by tapping the cards above. Press "Let them debate it" and they will take up positions against one another using their own doctrines as weapons.',
+  false
+);
+if (engineSel.value === 'omni') refreshOmniProfiles(true);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+})();
+</script>
+</body>
+</html>
