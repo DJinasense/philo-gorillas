@@ -1435,7 +1435,9 @@ async function ask({ system, messages }) {
     throw new Error('Backend not reachable (' + r.status + '). ' + detail);
   }
   const data = await r.json();
-  return (data.reply || '').trim();
+  const reply = (data.reply || '').trim();
+  if (!reply) throw new Error('Server returned an empty reply. Backend: ' + (data.backend || 'unknown'));
+  return reply;
 }
 
 async function getReply(key, userQuestion, extraInstruction) {
@@ -1489,7 +1491,10 @@ async function handleSend() {
       speak(persona, reply, langSel.value, key);
     } catch (e) {
       thinkingEl.remove();
-      addMessage(persona.name, key, '[Could not reach the reasoning engine: ' + e.message + ']', false);
+      const hint = e.message.includes('No provider key')
+        ? 'No API key is set on the server. Go to Vercel → Project → Settings → Environment Variables and add ANTHROPIC_API_KEY, then Redeploy.'
+        : e.message;
+      addMessage(persona.name, key, '⚠ ' + hint, false);
     }
   }
   statusEl.textContent = 'Ready.';
