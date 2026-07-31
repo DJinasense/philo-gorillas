@@ -51,15 +51,14 @@ module.exports = async function handler(req, res) {
 
   try {
     let reply, backend;
+    const errors = [];
 
     // ── Anthropic first ──────────────────────────────────────────────────────
     if (anthropicKey) {
       const out = await callAnthropic({ apiKey: anthropicKey, system, messages, maxTokens, model: body.model });
-      if (out.transientBillingError) {
-        // credits exhausted — fall through to next provider silently
-      } else if (out.error) {
-        res.status(out.status).json({ error: out.error });
-        return;
+      if (out.error) {
+        errors.push(out.error);
+        // fall through to next provider
       } else {
         reply = out.reply;
         backend = "anthropic";
@@ -70,24 +69,27 @@ module.exports = async function handler(req, res) {
     if (!reply && geminiKey) {
       const g = await callGemini({ apiKey: geminiKey, system, messages, maxTokens, model: body.geminiModel });
       if (g.error) {
-        // log but fall through to Groq
-        if (!groqKey) { res.status(g.status).json({ error: g.error }); return; }
+        errors.push(g.error);
+        // fall through to Groq
       } else {
         reply = g.reply;
-        backend = anthropicKey ? "gemini (anthropic billing failed over)" : "gemini";
+        backend = "gemini";
       }
     }
 
     // ── Groq third ───────────────────────────────────────────────────────────
     if (!reply && groqKey) {
       const gr = await callGroq({ apiKey: groqKey, system, messages, maxTokens });
-      if (gr.error) { res.status(gr.status).json({ error: gr.error }); return; }
-      reply = gr.reply;
-      backend = "groq (fallback)";
+      if (gr.error) {
+        errors.push(gr.error);
+      } else {
+        reply = gr.reply;
+        backend = "groq";
+      }
     }
 
     if (!reply) {
-      res.status(502).json({ error: "All configured providers returned empty replies." });
+      res.status(502).json({ error: "All providers failed. Errors: " + errors.join(" | ") });
       return;
     }
     res.status(200).json({ reply, backend });
