@@ -18,9 +18,12 @@ it is a real, ongoing cost tied to usage, not free like the Cowork preview was.
 - vercel.com → Sign up/in with your GitHub account.
 - "Add New… → Project" → Import the `four-minds` repo → Deploy (defaults are fine, it's a
   static site + one function, nothing to configure).
-- Once deployed: Project → Settings → Environment Variables → add
-  `ANTHROPIC_API_KEY` = (the key from step 1) → Save → then Deployments → redeploy so the
-  function picks up the new variable.
+- Once deployed: Project → Settings → Environment Variables → add each key below → Save
+  after each one → then Deployments → Redeploy so the function picks up the new values.
+  - `ANTHROPIC_API_KEY` — primary (claude-haiku-4-5). Get it at console.anthropic.com.
+  - `GEMINI_API_KEY` — fallback if Anthropic credits run out. Get it at aistudio.google.com.
+  - `GROQ_API_KEY` — third fallback. Get it at console.groq.com. (All three are free tiers.)
+  You only need one for the app to work; all three give you resilience.
 - Vercel gives you a URL like `four-minds.vercel.app`.
 
 ## 4. Install it on your phone

@@ -1,13 +1,14 @@
-// Vercel serverless function — proxy to Anthropic Messages API, with Gemini fallback.
+// Vercel serverless function — proxy to Anthropic Messages API, with Gemini and Groq fallback.
 // Accepts: { system: "<persona system prompt>", messages: [{role, content}, ...] }
 //     or:  { prompt: "<one big string>" }   (legacy fallback)
 //
 // Backend selection (on the server, never client-visible):
 //   - If ANTHROPIC_API_KEY is set → Anthropic Messages API (claude-haiku-4-5)
 //   - Else if GEMINI_API_KEY is set → Google Gemini (gemini-2.5-flash)
-//   - Else → 500 with a hint to set one on Vercel and redeploy.
+//   - Else if GROQ_API_KEY is set → Groq (llama-3.3-70b-versatile)
+//   - Else → 500 with a hint to set one on Vercel.
 //
-// Set the key in Vercel → Project → Settings → Environment Variables, then
+// Set keys in Vercel → Project → Settings → Environment Variables, then
 // trigger a redeploy — Vercel only picks up new env vars on a fresh build.
 
 module.exports = async function handler(req, res) {
@@ -17,10 +18,12 @@ module.exports = async function handler(req, res) {
   }
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!anthropicKey && !geminiKey) {
+  const geminiKey    = process.env.GEMINI_API_KEY;
+  const groqKey      = process.env.GROQ_API_KEY;
+
+  if (!anthropicKey && !geminiKey && !groqKey) {
     res.status(500).json({
-      error: "No provider key set on the server. Add ANTHROPIC_API_KEY or GEMINI_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy."
+      error: "No provider key set on the server. Add ANTHROPIC_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy."
     });
     return;
   }
@@ -31,8 +34,8 @@ module.exports = async function handler(req, res) {
   }
   body = body || {};
 
-  const system = typeof body.system === "string" ? body.system : "";
-  let messages = Array.isArray(body.messages) ? body.messages : null;
+  const system    = typeof body.system === "string" ? body.system : "";
+  let   messages  = Array.isArray(body.messages) ? body.messages : null;
   const maxTokens = Number.isInteger(body.max_tokens) ? body.max_tokens : 1024;
 
   if (!messages) {
@@ -48,28 +51,52 @@ module.exports = async function handler(req, res) {
 
   try {
     let reply, backend;
+
+    // ── Anthropic first ──────────────────────────────────────────────────────
     if (anthropicKey) {
       const out = await callAnthropic({ apiKey: anthropicKey, system, messages, maxTokens, model: body.model });
-      if (out.transientBillingError && geminiKey) {
-        // Anthropic key is present but out of credits — silently fall through to Gemini.
-        const g = await callGemini({ apiKey: geminiKey, system, messages, maxTokens, model: body.geminiModel });
-        if (g.error) { res.status(g.status).json({ error: g.error }); return; }
-        reply = g.reply; backend = "gemini (anthropic billing failed over)";
+      if (out.transientBillingError) {
+        // credits exhausted — fall through to next provider silently
       } else if (out.error) {
-        res.status(out.status).json({ error: out.error }); return;
+        res.status(out.status).json({ error: out.error });
+        return;
       } else {
-        reply = out.reply; backend = "anthropic";
+        reply = out.reply;
+        backend = "anthropic";
       }
-    } else {
+    }
+
+    // ── Gemini second ─────────────────────────────────────────────────────────
+    if (!reply && geminiKey) {
       const g = await callGemini({ apiKey: geminiKey, system, messages, maxTokens, model: body.geminiModel });
-      if (g.error) { res.status(g.status).json({ error: g.error }); return; }
-      reply = g.reply; backend = "gemini";
+      if (g.error) {
+        // log but fall through to Groq
+        if (!groqKey) { res.status(g.status).json({ error: g.error }); return; }
+      } else {
+        reply = g.reply;
+        backend = anthropicKey ? "gemini (anthropic billing failed over)" : "gemini";
+      }
+    }
+
+    // ── Groq third ───────────────────────────────────────────────────────────
+    if (!reply && groqKey) {
+      const gr = await callGroq({ apiKey: groqKey, system, messages, maxTokens });
+      if (gr.error) { res.status(gr.status).json({ error: gr.error }); return; }
+      reply = gr.reply;
+      backend = "groq (fallback)";
+    }
+
+    if (!reply) {
+      res.status(502).json({ error: "All configured providers returned empty replies." });
+      return;
     }
     res.status(200).json({ reply, backend });
   } catch (e) {
     res.status(500).json({ error: "Backend call failed: " + String(e && e.message || e) });
   }
 };
+
+// ── Provider implementations ─────────────────────────────────────────────────
 
 async function callAnthropic({ apiKey, system, messages, maxTokens, model }) {
   const payload = {
@@ -118,7 +145,6 @@ async function callAnthropic({ apiKey, system, messages, maxTokens, model }) {
 
 async function callGemini({ apiKey, system, messages, maxTokens, model }) {
   const modelId = (typeof model === "string" && model) || "gemini-flash-latest";
-  // Gemini uses "user" / "model" roles and a `contents` array. Map Anthropic-shape messages over.
   const contents = messages.map(m => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }]
@@ -134,7 +160,6 @@ async function callGemini({ apiKey, system, messages, maxTokens, model }) {
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
               encodeURIComponent(modelId) + ":generateContent?key=" + encodeURIComponent(apiKey);
 
-  // One quick retry on transient overload (429/503) — Gemini's free tier throttles bursts.
   let upstream, raw;
   for (let attempt = 0; attempt < 2; attempt++) {
     upstream = await fetch(url, {
@@ -158,13 +183,52 @@ async function callGemini({ apiKey, system, messages, maxTokens, model }) {
   try { data = JSON.parse(raw); }
   catch (e) { return { status: 502, error: "Non-JSON Gemini response: " + raw.slice(0, 300) }; }
 
-  const cand = data.candidates && data.candidates[0];
+  const cand  = data.candidates && data.candidates[0];
   const parts = cand && cand.content && cand.content.parts;
   const reply = Array.isArray(parts)
     ? parts.filter(p => p && typeof p.text === "string").map(p => p.text).join("\n").trim()
     : "";
   if (!reply) {
     return { status: 502, error: "Empty Gemini reply (finishReason=" + (cand && cand.finishReason || "?") + ")." };
+  }
+  return { reply };
+}
+
+async function callGroq({ apiKey, system, messages, maxTokens }) {
+  // Groq is OpenAI-compatible. We use llama-3.3-70b-versatile — strong, cheap, fast.
+  const groqMessages = system
+    ? [{ role: "system", content: system }, ...messages]
+    : messages;
+
+  const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "authorization": "Bearer " + apiKey
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: maxTokens,
+      messages: groqMessages
+    })
+  });
+
+  const raw = await upstream.text();
+  if (!upstream.ok) {
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      detail = (parsed && parsed.error && (parsed.error.message || parsed.error.type)) || raw;
+    } catch (e) { /* keep raw */ }
+    return { status: upstream.status, error: "Groq " + upstream.status + ": " + String(detail).slice(0, 500) };
+  }
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (e) { return { status: 502, error: "Non-JSON Groq response: " + raw.slice(0, 300) }; }
+
+  const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
+  if (!reply) {
+    return { status: 502, error: "Empty Groq reply (finish_reason=" + (data.choices && data.choices[0] && data.choices[0].finish_reason || "?") + ")." };
   }
   return { reply };
 }

@@ -19,12 +19,13 @@
 
 <style>
   /* Academia (Scholarly) design system — refined from ui-ux-pro-max-skill styles.csv row 79
-     (MIT). Kept light-mode ("scriptorium" variant): parchment ground, mahogany ink, brass
-     and library-crimson accents; Cormorant Garamond / Crimson Pro / Cinzel type trio.
-     Pass criteria applied: WCAG AA contrast, 44px touch targets, visible focus rings,
-     prefers-reduced-motion, safe areas, 4/8pt spacing rhythm, no emoji as icons. */
+     (MIT). Light and dark modes; parchment/mahogany/brass/crimson palette.
+     Cormorant Garamond / Crimson Pro / Cinzel type trio. WCAG AA, 44px touch targets,
+     visible focus rings, prefers-reduced-motion, safe areas, 4/8pt spacing rhythm. */
   :root {
-    color-scheme: light;
+    color-scheme: light dark;
+
+    /* Light mode (default) */
     --bg:        #EDE4D3;
     --paper:     #F7F1E4;
     --paper-2:   #FBF6EB;
@@ -37,6 +38,7 @@
     --brass-2:   #7E611F;
     --crimson:   #8B2635;
     --gold:      #C9A962;
+    --overlay-bg: rgba(28,23,20,.5);
 
     --plato:     #3B4A7A;
     --plato-2:   #E4E8F2;
@@ -60,6 +62,32 @@
     --duration-fast: 140ms;
     --duration:      220ms;
     --ease:          cubic-bezier(.2,.7,.2,1);
+  }
+
+  /* Dark mode overrides */
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg:        #0F0D0B;
+    --paper:     #1A1612;
+    --paper-2:   #211D18;
+    --ink:       #E8DDD0;
+    --ink-2:     #B8A898;
+    --muted:     #7A6E60;
+    --line:      #2E2820;
+    --line-2:    #3A3228;
+    --brass:     #C9A962;
+    --brass-2:   #9C7A32;
+    --crimson:   #B03244;
+    --gold:      #E2C97E;
+    --overlay-bg: rgba(0,0,0,.7);
+
+    --plato-2:     #1A2040;
+    --nietzsche-2: #2A1018;
+    --descartes-2: #0E2419;
+    --marcus-2:    #241C08;
+
+    --shadow-card: 0 1px 2px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.3);
+    --focus-ring:  0 0 0 3px rgba(201,169,98,.55);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -531,17 +559,207 @@
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
   }
+
+  /* ── 3-D parallax background ── */
+  #parallaxLayer {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    perspective: 800px;
+    overflow: hidden;
+  }
+  #parallaxInner {
+    position: absolute; inset: -6%;
+    background:
+      radial-gradient(ellipse 80% 60% at 30% 40%, rgba(156,122,50,.13) 0%, transparent 65%),
+      radial-gradient(ellipse 60% 50% at 75% 65%, rgba(139,38,53,.09) 0%, transparent 65%),
+      radial-gradient(ellipse 100% 80% at 50% 100%, rgba(59,74,122,.08) 0%, transparent 70%),
+      linear-gradient(160deg, var(--bg) 0%, var(--paper) 50%, var(--bg) 100%);
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 80ms linear;
+  }
+  [data-theme="dark"] #parallaxInner {
+    background:
+      radial-gradient(ellipse 80% 60% at 30% 40%, rgba(201,169,98,.08) 0%, transparent 65%),
+      radial-gradient(ellipse 60% 50% at 75% 65%, rgba(176,50,68,.06) 0%, transparent 65%),
+      radial-gradient(ellipse 100% 80% at 50% 100%, rgba(26,32,64,.12) 0%, transparent 70%),
+      linear-gradient(160deg, var(--bg) 0%, var(--paper) 50%, var(--bg) 100%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #parallaxInner { transition: none; transform: none !important; }
+  }
+
+  /* ── Header actions row ── */
+  header .brand-row { justify-content: space-between; align-items: center; flex-wrap: nowrap; }
+  header .brand-left { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  header .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  /* Theme toggle */
+  #themeToggle {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--line-2);
+    background: var(--paper-2);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--ink); font-size: 16px; line-height: 1;
+    transition: background var(--duration-fast) var(--ease);
+  }
+  #themeToggle:hover { background: var(--paper); }
+  #themeToggle:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+
+  /* Login button + dropdown */
+  #loginWrap { position: relative; }
+  #loginBtn {
+    font-family: var(--font-label);
+    font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    padding: 7px 16px; min-height: 36px;
+    border-radius: 18px;
+    border: 1px solid var(--brass-2);
+    background: linear-gradient(180deg, var(--brass), var(--brass-2));
+    color: #fff; cursor: pointer;
+    transition: filter var(--duration-fast) var(--ease);
+  }
+  #loginBtn:hover { filter: brightness(1.08); }
+  #loginBtn:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+  #loginDropdown {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0;
+    width: 310px; z-index: 500;
+    background: var(--paper); border: 1px solid var(--line-2);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    padding: 20px;
+  }
+  #loginDropdown.open { display: block; }
+  #loginDropdown .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  #loginDropdown .tab {
+    font-family: var(--font-label); font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; padding: 6px 16px 10px; border: none;
+    background: none; cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  #loginDropdown .tab.active { color: var(--brass); border-bottom-color: var(--brass); }
+  #loginDropdown .tab:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+  .auth-form { display: none; }
+  .auth-form.visible { display: block; }
+  .auth-form label {
+    display: block; font-family: var(--font-label); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 4px; margin-top: 12px;
+    font-weight: 600;
+  }
+  .auth-form label:first-child { margin-top: 0; }
+  .auth-form input[type="email"], .auth-form input[type="password"] {
+    width: 100%; box-sizing: border-box;
+    font-family: var(--font-body); font-size: 15px;
+    padding: 9px 11px; border-radius: var(--radius);
+    border: 1px solid var(--line-2);
+    background: var(--paper-2); color: var(--ink);
+  }
+  .auth-form input:focus-visible { box-shadow: var(--focus-ring); border-color: var(--brass); outline: none; }
+  .auth-submit {
+    margin-top: 16px; width: 100%;
+    font-family: var(--font-label); font-size: 12px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; padding: 10px;
+    border-radius: var(--radius); border: none;
+    background: linear-gradient(180deg, var(--crimson), #6a1e2a);
+    color: #fff; cursor: pointer;
+  }
+  .auth-submit:hover { filter: brightness(1.08); }
+  .auth-submit:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+  #loginDropdown .pro-note {
+    margin-top: 14px; padding: 10px 12px;
+    background: var(--marcus-2); border-radius: var(--radius);
+    border: 1px solid var(--gold);
+    font-family: var(--font-body); font-size: 13px; color: var(--ink-2); line-height: 1.45;
+  }
+  #loginDropdown .pro-note strong { color: var(--brass); font-family: var(--font-label); letter-spacing: .05em; }
+
+  /* ── Freemium paywall modal ── */
+  #proModal {
+    display: none; position: fixed; inset: 0; z-index: 600;
+    background: var(--overlay-bg);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #proModal.open { display: flex; }
+  #proModal .modal-box {
+    background: var(--paper); max-width: 380px; width: 100%;
+    border-radius: 12px; padding: 28px 28px 24px;
+    box-shadow: 0 12px 48px rgba(0,0,0,.28);
+    border: 1px solid var(--line-2);
+    text-align: center;
+  }
+  #proModal .modal-icon { font-size: 36px; line-height: 1; margin-bottom: 10px; }
+  #proModal h2 {
+    font-family: var(--font-display); font-size: 24px; font-weight: 700;
+    color: var(--ink); margin: 0 0 6px;
+  }
+  #proModal p {
+    font-family: var(--font-body); font-size: 16px; color: var(--ink-2);
+    margin: 0 0 20px; line-height: 1.5;
+  }
+  #proModal .modal-price {
+    font-family: var(--font-label); font-size: 13px; letter-spacing: .08em;
+    color: var(--brass); margin-bottom: 16px; display: block;
+  }
+  #proModal .cta {
+    display: block; width: 100%;
+    font-family: var(--font-label); font-size: 13px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; padding: 12px;
+    border-radius: var(--radius); border: none;
+    background: linear-gradient(180deg, var(--brass), var(--brass-2));
+    color: #fff; cursor: pointer; margin-bottom: 10px;
+  }
+  #proModal .cta:hover { filter: brightness(1.08); }
+  #proModal .dismiss {
+    font-family: var(--font-body); font-size: 14px; color: var(--muted);
+    background: none; border: none; cursor: pointer; padding: 6px;
+  }
+  #proModal .dismiss:hover { color: var(--ink); }
+  #proModal .dismiss:focus-visible { box-shadow: var(--focus-ring); border-radius: var(--radius); outline: none; }
 </style>
 </head>
 <body>
 
+<!-- 3D cursor-following parallax background -->
+<div id="parallaxLayer" aria-hidden="true"><div id="parallaxInner"></div></div>
+
 <header>
   <div class="brand-row">
-    <h1>Four Minds</h1>
-    <span class="divider-glyph">&#10087;</span>
-    <span style="font-family: var(--font-display); font-style: italic; color: var(--muted); font-size: 15px;">
-      Plato · Nietzsche · Descartes · Marcus Aurelius
-    </span>
+    <div class="brand-left">
+      <h1>Four Minds</h1>
+      <span class="divider-glyph">&#10087;</span>
+      <span style="font-family: var(--font-display); font-style: italic; color: var(--muted); font-size: 15px;">
+        Plato · Nietzsche · Descartes · Marcus Aurelius
+      </span>
+    </div>
+    <div class="header-actions">
+      <button id="themeToggle" aria-label="Toggle dark/light theme" title="Toggle theme">☽</button>
+      <div id="loginWrap">
+        <button id="loginBtn">Sign In</button>
+        <div id="loginDropdown" role="dialog" aria-modal="true" aria-label="Sign in or create account">
+          <div class="tabs">
+            <button class="tab active" id="tabSignIn" aria-pressed="true">Sign In</button>
+            <button class="tab" id="tabSignUp" aria-pressed="false">Join Free</button>
+          </div>
+          <form class="auth-form visible" id="formSignIn" onsubmit="return false;">
+            <label for="siEmail">Email</label>
+            <input id="siEmail" type="email" placeholder="you@example.com" autocomplete="email">
+            <label for="siPass">Password</label>
+            <input id="siPass" type="password" placeholder="••••••••" autocomplete="current-password">
+            <button class="auth-submit" type="submit">Continue</button>
+          </form>
+          <form class="auth-form" id="formSignUp" onsubmit="return false;">
+            <label for="suEmail">Email</label>
+            <input id="suEmail" type="email" placeholder="you@example.com" autocomplete="email">
+            <label for="suPass">Choose a password</label>
+            <input id="suPass" type="password" placeholder="8+ characters" autocomplete="new-password">
+            <button class="auth-submit" type="submit">Create account — Free</button>
+          </form>
+          <div class="pro-note">
+            <strong>Pro — $6/month</strong><br>
+            Unlock character voices: hear Plato, Nietzsche, Descartes &amp; Marcus speak in their own cloned voice via OmniVoice. Reading is always free.
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <p>Simulated personas built from their own texts, for study and debate. Not verified historical transcripts.</p>
 </header>
@@ -657,6 +875,18 @@
     <button class="close-x" id="settingsClose" aria-label="Close settings">&times;</button>
     <h2>Settings</h2>
     <div id="settingsSlot"></div>
+  </div>
+</div>
+
+<!-- Freemium voice gate modal -->
+<div id="proModal" role="dialog" aria-modal="true" aria-label="Unlock philosopher voices">
+  <div class="modal-box">
+    <div class="modal-icon">🎙️</div>
+    <h2>Hear them speak</h2>
+    <p>Character voices — Plato, Nietzsche, Descartes &amp; Marcus — are a Pro feature.<br>Reading is always free.</p>
+    <span class="modal-price">Pro · $6 / month</span>
+    <button class="cta" id="proModalCta">Unlock philosopher voices</button>
+    <button class="dismiss" id="proModalDismiss">Continue reading for free</button>
   </div>
 </div>
 
@@ -1108,6 +1338,7 @@ async function speakOmni(persona, key, text) {
 }
 function speak(persona, text, lang, key) {
   if (!audioToggle.checked) return;
+  if (!isPro()) { showProModal(); return; }
   if (engineSel.value === 'omni') speakOmni(persona, key, text);
   else                            speakBrowser(persona, text, lang, key);
 }
@@ -1305,6 +1536,106 @@ debateBtn.addEventListener('click', async () => {
   statusEl.textContent = 'Ready.';
   debateBtn.disabled = false;
 });
+
+/* -------- Freemium helpers -------- */
+const PRO_KEY = 'four-minds:pro';
+function isPro() { return !!localStorage.getItem(PRO_KEY); }
+function showProModal() {
+  const m = document.getElementById('proModal');
+  m.classList.add('open');
+  m.focus();
+}
+function closeProModal() {
+  document.getElementById('proModal').classList.remove('open');
+}
+document.getElementById('proModalDismiss').addEventListener('click', closeProModal);
+document.getElementById('proModalCta').addEventListener('click', () => {
+  closeProModal();
+  // Placeholder — wire to Stripe checkout URL when ready
+  alert('Pro billing coming soon! For now, tap Dismiss to keep reading for free.');
+});
+document.getElementById('proModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeProModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeProModal();
+});
+
+/* -------- Theme toggle -------- */
+const THEME_KEY = 'four-minds:theme';
+function applyTheme(dark) {
+  document.documentElement.dataset.theme = dark ? 'dark' : '';
+  document.getElementById('themeToggle').textContent = dark ? '☀' : '☽';
+}
+(function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  applyTheme(saved === 'dark');
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  applyTheme(!isDark);
+  localStorage.setItem(THEME_KEY, !isDark ? 'dark' : 'light');
+});
+
+/* -------- Login dropdown -------- */
+const loginBtn  = document.getElementById('loginBtn');
+const loginDrop = document.getElementById('loginDropdown');
+const tabSignIn = document.getElementById('tabSignIn');
+const tabSignUp = document.getElementById('tabSignUp');
+const frmSignIn = document.getElementById('formSignIn');
+const frmSignUp = document.getElementById('formSignUp');
+
+function toggleLoginDrop(force) {
+  const open = typeof force === 'boolean' ? force : !loginDrop.classList.contains('open');
+  loginDrop.classList.toggle('open', open);
+  loginBtn.setAttribute('aria-expanded', String(open));
+}
+loginBtn.addEventListener('click', e => { e.stopPropagation(); toggleLoginDrop(); });
+document.addEventListener('click', e => {
+  if (!loginDrop.contains(e.target) && e.target !== loginBtn) toggleLoginDrop(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') toggleLoginDrop(false);
+});
+tabSignIn.addEventListener('click', () => {
+  tabSignIn.classList.add('active'); tabSignIn.setAttribute('aria-pressed', 'true');
+  tabSignUp.classList.remove('active'); tabSignUp.setAttribute('aria-pressed', 'false');
+  frmSignIn.classList.add('visible'); frmSignUp.classList.remove('visible');
+});
+tabSignUp.addEventListener('click', () => {
+  tabSignUp.classList.add('active'); tabSignUp.setAttribute('aria-pressed', 'true');
+  tabSignIn.classList.remove('active'); tabSignIn.setAttribute('aria-pressed', 'false');
+  frmSignUp.classList.add('visible'); frmSignIn.classList.remove('visible');
+});
+
+/* -------- 3-D cursor-following parallax -------- */
+(function initParallax() {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+  const inner = document.getElementById('parallaxInner');
+  if (!inner) return;
+  let tX = 0, tY = 0, rX = 0, rY = 0, raf = null;
+  const MAX = 6;
+  document.addEventListener('mousemove', e => {
+    tX = ((e.clientX / window.innerWidth)  - 0.5) *  MAX * 2;
+    tY = ((e.clientY / window.innerHeight) - 0.5) * -MAX * 2;
+    if (!raf) raf = requestAnimationFrame(step);
+  });
+  function step() {
+    rX += (tX - rX) * 0.08;
+    rY += (tY - rY) * 0.08;
+    inner.style.transform = `rotateY(${rX}deg) rotateX(${rY}deg)`;
+    raf = Math.abs(tX - rX) > 0.01 || Math.abs(tY - rY) > 0.01
+      ? requestAnimationFrame(step) : null;
+  }
+  // Touch: gently tilt with device orientation
+  window.addEventListener('deviceorientation', e => {
+    if (e.gamma == null) return;
+    tX = Math.max(-MAX, Math.min(MAX,  e.gamma / 5));
+    tY = Math.max(-MAX, Math.min(MAX, (e.beta  - 40) / -5));
+    if (!raf) raf = requestAnimationFrame(step);
+  });
+})();
 
 /* -------- Boot -------- */
 loadSettings();
