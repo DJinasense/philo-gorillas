@@ -429,6 +429,36 @@
     color: var(--ink);
     cursor: pointer;
   }
+
+  /* Mode toggle — Room vs Solo. Segmented control, keyboard-friendly. */
+  .mode-toggle {
+    display: inline-flex;
+    border: 1px solid var(--ink);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    min-height: 32px;
+  }
+  .mode-toggle button {
+    font-family: var(--font-label);
+    font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    padding: 7px 14px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .mode-toggle button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .mode-toggle button:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+  .mode-hint {
+    font-family: var(--font-ui);
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
   .debatebtn:hover { background: var(--ink); color: var(--paper); }
   .debatebtn:focus-visible { box-shadow: var(--focus-ring); }
   .debatebtn:disabled { opacity: .45; cursor: default; }
@@ -606,6 +636,11 @@
       </div>
       <div class="subrow">
         <div class="left">
+          <div class="mode-toggle" role="group" aria-label="Conversation mode">
+            <button type="button" id="modeRoom" aria-pressed="true">Room</button>
+            <button type="button" id="modeSolo" aria-pressed="false">Solo</button>
+          </div>
+          <span class="mode-hint" id="modeHint">All active philosophers reply.</span>
           <label><input type="checkbox" id="audioToggle" checked> Speak replies aloud</label>
           <button class="debatebtn" id="debateBtn">Let them debate it &rarr;</button>
         </div>
@@ -637,8 +672,9 @@ const PERSONAS = {
   plato: {
     name: "Plato",
     color: "plato",
-    voiceHints: ["Daniel", "David", "Alex", "Male"],
-    pitch: 0.9, rate: 0.92,
+    // Aristocratic Athenian, warm and unhurried, mid-lower register. Prefer UK/Anglo-classical voices.
+    voiceHints: ["Google UK English Male", "Daniel", "Arthur", "Oliver", "David", "Male"],
+    pitch: 0.88, rate: 0.9,
     system: `You are Plato, aristocratic Athenian philosopher, student and dramatist of Socrates, founder of the Academy. You almost never assert in your own voice — you write dialogues. In this room you speak directly, but you retain the Socratic instinct: elicit a definition, test it against a case your interlocutor already accepts, expose the contradiction, and invite a better answer. You are speaking with a person of the present day and you answer them plainly, but with dialectical patience.
 
 DOCTRINE:
@@ -671,8 +707,9 @@ You are grounded in the Benjamin Jowett translation of The Republic and may draw
   nietzsche: {
     name: "Friedrich Nietzsche",
     color: "nietzsche",
-    voiceHints: ["Fred", "Alex", "Male"],
-    pitch: 1.05, rate: 1.12,
+    // Younger, intense, faster, edge of mania. Prefer German-inflected or high-strung male voices.
+    voiceHints: ["Google Deutsch", "Markus", "Stefan", "Yannick", "Fred", "Alex", "Male"],
+    pitch: 1.15, rate: 1.18,
     system: `You are Friedrich Nietzsche, philologist and philosopher, author of The Birth of Tragedy, Human All Too Human, Daybreak, The Gay Science, Thus Spoke Zarathustra, Beyond Good and Evil, On the Genealogy of Morals, Twilight of the Idols, The Antichrist, Ecce Homo. You are speaking directly with someone in the present day; you take them seriously enough to try to wound their comforts.
 
 DOCTRINE:
@@ -707,8 +744,9 @@ You are grounded in the Helen Zimmern translation of Beyond Good and Evil (Guten
   descartes: {
     name: "René Descartes",
     color: "descartes",
-    voiceHints: ["Thomas", "Daniel", "Male"],
-    pitch: 0.85, rate: 0.88,
+    // Precise, even, slightly formal, French-inflected, deliberate. Prefer French male voices.
+    voiceHints: ["Google français", "Thomas", "Nicolas", "Henri", "Paul", "Grandpa", "Male"],
+    pitch: 1.0, rate: 0.95,
     system: `You are René Descartes, French philosopher, mathematician, and natural scientist — author of the Discourse on the Method, the Meditations on First Philosophy, the Principles of Philosophy, and The Passions of the Soul. You are speaking directly with someone in the present day; you address them the way you address an intelligent reader of the Meditations, as a fellow thinker meant to reperform the reasoning, not to accept it on your authority.
 
 DOCTRINE:
@@ -741,8 +779,9 @@ You are grounded in the John Veitch translation of the Discourse on the Method (
   marcus: {
     name: "Marcus Aurelius",
     color: "marcus",
-    voiceHints: ["Oliver", "Arthur", "Male"],
-    pitch: 0.8, rate: 0.85,
+    // Grave, weathered, low, imperial authority, minimal affect. Prefer the deepest available male voice.
+    voiceHints: ["Rishi", "Grandpa", "Bahh", "Reed", "Aaron", "Diego", "Male"],
+    pitch: 0.7, rate: 0.82,
     system: `You are Marcus Aurelius Antoninus, Roman emperor from 161 to 180 CE, and Stoic. The book history calls the Meditations you titled Ta eis heauton — "To Himself." It was never written for readers. You are speaking now with a person of the present day, but you carry the habit of that private journal: you coach yourself as much as you address them.
 
 DOCTRINE (Stoic, in the lineage of Epictetus, whom your teacher Junius Rusticus put in your hands):
@@ -803,6 +842,10 @@ const settingsClose = document.getElementById('settingsClose');
 const settingsDrawer = document.getElementById('settingsDrawer');
 const settingsSlot = document.getElementById('settingsSlot');
 const settingsPanel = document.getElementById('settingsPanel');
+const modeRoomBtn  = document.getElementById('modeRoom');
+const modeSoloBtn  = document.getElementById('modeSolo');
+const modeHint     = document.getElementById('modeHint');
+let mode = 'room'; /* 'room' | 'solo' */
 
 /* -------- Settings persistence -------- */
 const STORE_KEY = 'four-minds:v2';
@@ -814,6 +857,7 @@ function loadSettings() {
     if (s.omniUrl) omniUrl.value = s.omniUrl;
     if (s.omniToken) omniToken.value = s.omniToken;
     if (typeof s.audio === 'boolean') audioToggle.checked = s.audio;
+    if (s.mode === 'solo' || s.mode === 'room') mode = s.mode;
     if (Array.isArray(s.active) && s.active.length) {
       activeSet = new Set(s.active);
       document.querySelectorAll('.phil-card').forEach(c => {
@@ -824,6 +868,7 @@ function loadSettings() {
     }
   } catch(e) {}
   omniFields.style.display = engineSel.value === 'omni' ? 'block' : 'none';
+  applyMode();
 }
 function saveSettings() {
   try {
@@ -833,6 +878,7 @@ function saveSettings() {
       omniUrl: omniUrl.value,
       omniToken: omniToken.value,
       audio: audioToggle.checked,
+      mode: mode,
       active: Array.from(activeSet)
     }));
   } catch(e) {}
@@ -840,6 +886,7 @@ function saveSettings() {
 [langSel, engineSel, omniUrl, omniToken, audioToggle].forEach(el => {
   el.addEventListener('change', saveSettings);
 });
+langSel.addEventListener('change', () => assignVoices(langSel.value));
 engineSel.addEventListener('change', () => {
   omniFields.style.display = engineSel.value === 'omni' ? 'block' : 'none';
   if (engineSel.value === 'omni') refreshOmniProfiles();
@@ -865,18 +912,30 @@ settingsDrawer.addEventListener('click', e => {
 document.querySelectorAll('.phil-card .archive-link').forEach(link => {
   link.addEventListener('click', e => e.stopPropagation());
 });
+function reflectActiveCards() {
+  document.querySelectorAll('.phil-card').forEach(c => {
+    const on = activeSet.has(c.dataset.p);
+    c.classList.toggle('active', on);
+    c.setAttribute('aria-pressed', String(on));
+  });
+}
 document.querySelectorAll('.phil-card').forEach(card => {
   function toggle() {
     const p = card.dataset.p;
-    if (activeSet.has(p)) {
-      if (activeSet.size === 1) return;
-      activeSet.delete(p);
-      card.classList.remove('active');
-      card.setAttribute('aria-pressed', 'false');
+    if (mode === 'solo') {
+      activeSet = new Set([p]);
+      reflectActiveCards();
     } else {
-      activeSet.add(p);
-      card.classList.add('active');
-      card.setAttribute('aria-pressed', 'true');
+      if (activeSet.has(p)) {
+        if (activeSet.size === 1) return;
+        activeSet.delete(p);
+        card.classList.remove('active');
+        card.setAttribute('aria-pressed', 'false');
+      } else {
+        activeSet.add(p);
+        card.classList.add('active');
+        card.setAttribute('aria-pressed', 'true');
+      }
     }
     saveSettings();
   }
@@ -886,9 +945,31 @@ document.querySelectorAll('.phil-card').forEach(card => {
   });
 });
 
+/* -------- Mode toggle (Room / Solo) -------- */
+function applyMode() {
+  const isSolo = mode === 'solo';
+  modeRoomBtn.setAttribute('aria-pressed', String(!isSolo));
+  modeSoloBtn.setAttribute('aria-pressed', String(isSolo));
+  debateBtn.style.display = isSolo ? 'none' : '';
+  if (isSolo) {
+    // Collapse to a single active philosopher (first in current activeSet, or Plato).
+    const keeper = activeSet.size ? Array.from(activeSet)[0] : 'plato';
+    activeSet = new Set([keeper]);
+    reflectActiveCards();
+    modeHint.textContent = 'One-on-one. Tap a card to switch.';
+    inputEl.placeholder = 'Speak to ' + PERSONAS[keeper].name + '…';
+  } else {
+    modeHint.textContent = 'All active philosophers reply.';
+    inputEl.placeholder = 'Ask the room something…';
+  }
+}
+modeRoomBtn.addEventListener('click', () => { mode = 'room'; applyMode(); saveSettings(); });
+modeSoloBtn.addEventListener('click', () => { mode = 'solo'; applyMode(); saveSettings(); });
+
 /* -------- Browser TTS -------- */
 function loadVoices() {
   voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  assignVoices(langSel.value);
   voiceNote.textContent = voices.length
     ? (voices.length + ' system voices detected.')
     : 'No system voices detected yet.';
@@ -899,22 +980,45 @@ if ('speechSynthesis' in window) {
 } else {
   voiceNote.textContent = 'Speech synthesis not supported in this browser.';
 }
-function pickVoice(persona, lang) {
-  if (!voices.length) return null;
+/* Assigns distinct browser voices to the four personas. For each persona we
+   run their hint list in order and take the first hint that matches a voice
+   not already claimed by another persona. Falls back to any male voice,
+   then any voice. Locale-first so multi-language selections still work. */
+const voiceAssignment = {};
+function assignVoices(lang) {
+  if (!voices.length) { for (const k of Object.keys(PERSONAS)) voiceAssignment[k] = null; return; }
   const langVoices = voices.filter(v => v.lang && v.lang.slice(0,2) === lang.slice(0,2));
   const pool = langVoices.length ? langVoices : voices;
-  for (const hint of persona.voiceHints) {
-    const m = pool.find(v => v.name.includes(hint));
-    if (m) return m;
+  const claimed = new Set();
+  const order = ['plato','nietzsche','descartes','marcus'];
+  for (const key of order) {
+    const persona = PERSONAS[key];
+    let picked = null;
+    for (const hint of persona.voiceHints) {
+      const m = pool.find(v => v.name.includes(hint) && !claimed.has(v.name));
+      if (m) { picked = m; break; }
+    }
+    if (!picked) {
+      picked = pool.find(v => /male/i.test(v.name) && !/female/i.test(v.name) && !claimed.has(v.name));
+    }
+    if (!picked) {
+      picked = pool.find(v => !claimed.has(v.name));
+    }
+    if (!picked) picked = pool[0];
+    voiceAssignment[key] = picked;
+    if (picked) claimed.add(picked.name);
   }
-  const male = pool.find(v => /male/i.test(v.name) && !/female/i.test(v.name));
-  return male || pool[0];
 }
-function speakBrowser(persona, text, lang) {
+function pickVoice(persona, lang, key) {
+  if (!voices.length) return null;
+  if (!voiceAssignment[key]) assignVoices(lang);
+  return voiceAssignment[key] || voices[0];
+}
+function speakBrowser(persona, text, lang, key) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  const v = pickVoice(persona, lang);
+  const v = pickVoice(persona, lang, key);
   if (v) u.voice = v;
   u.lang = lang;
   u.pitch = persona.pitch;
@@ -999,13 +1103,13 @@ async function speakOmni(persona, key, text) {
     currentAudio.play().catch(() => {});
   } catch (e) {
     statusEl.textContent = 'OmniVoice unreachable (' + e.message + ') — falling back to browser voice.';
-    speakBrowser(persona, text, langSel.value);
+    speakBrowser(persona, text, langSel.value, key);
   }
 }
 function speak(persona, text, lang, key) {
   if (!audioToggle.checked) return;
   if (engineSel.value === 'omni') speakOmni(persona, key, text);
-  else                            speakBrowser(persona, text, lang);
+  else                            speakBrowser(persona, text, lang, key);
 }
 
 /* -------- Speech recognition -------- */
@@ -1071,10 +1175,16 @@ function addThinking(label) {
   return el;
 }
 
-/* -------- Backend bridge (Cowork or /api/ask) -------- */
-async function ask(promptText) {
+/* -------- Backend bridge (Cowork or /api/ask) --------
+   Preferred call: ask({ system, messages }). Cowork's bridge only accepts a
+   single prompt string, so on that path we flatten into one; on /api/ask we
+   send the structured payload so Anthropic gets a proper system field and
+   turn-by-turn messages instead of one wall of user-role text. */
+async function ask({ system, messages }) {
   if (window.cowork && window.cowork.askClaude) {
-    const res = await window.cowork.askClaude(promptText, []);
+    const flat = (system ? system + '\n\n' : '') +
+      messages.map(m => (m.role === 'user' ? 'USER: ' : 'ASSISTANT: ') + m.content).join('\n\n');
+    const res = await window.cowork.askClaude(flat, []);
     if (typeof res === 'string') return res.trim();
     if (res && typeof res.text === 'string') return res.text.trim();
     if (res && res.content) {
@@ -1086,7 +1196,7 @@ async function ask(promptText) {
   const r = await fetch('/api/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: promptText })
+    body: JSON.stringify({ system, messages, max_tokens: 1024 })
   });
   if (!r.ok) {
     let detail = '';
@@ -1097,27 +1207,32 @@ async function ask(promptText) {
   return (data.reply || '').trim();
 }
 
-function recentHistoryText(limit) {
-  return history.slice(-limit).map(h => h.speaker + ': ' + h.text).join('\n');
-}
-
 async function getReply(key, userQuestion, extraInstruction) {
   const persona = PERSONAS[key];
   const lang = langSel.value;
   const langName = LANG_NAMES[lang] || 'English';
-  const langLine = lang === 'en-US' ? '' : `\nRespond ENTIRELY in ${langName}. Do not include an English translation.`;
-  const context = recentHistoryText(12);
-  const prompt = `${persona.system}
-${langLine}
+  const langLine = lang === 'en-US' ? '' : `\n\nRespond ENTIRELY in ${langName}. Do not include an English translation.`;
+  const styleLine = '\n\nReply in plain prose — no markdown, no lists, no headers, no stage directions. Stay in character.';
+  const system = persona.system + langLine + styleLine;
 
-Conversation so far (for your context; do not repeat it back):
-${context || '(nothing yet)'}
-
-The person you are speaking with just said: "${userQuestion}"
-${extraInstruction || ''}
-
-Reply now, in character, in your own voice. Plain prose only — no markdown, no lists, no headers, no stage directions.`;
-  return ask(prompt);
+  const messages = [];
+  const recent = history.slice(-12);
+  for (const h of recent) {
+    if (h.speaker === 'The person') {
+      messages.push({ role: 'user', content: h.text });
+    } else {
+      messages.push({ role: 'assistant', content: h.speaker + ': ' + h.text });
+    }
+  }
+  const userTurn = extraInstruction
+    ? userQuestion + '\n\n[room prompt: ' + extraInstruction + ']'
+    : userQuestion;
+  if (messages.length && messages[messages.length - 1].role === 'user') {
+    messages[messages.length - 1] = { role: 'user', content: userTurn };
+  } else {
+    messages.push({ role: 'user', content: userTurn });
+  }
+  return ask({ system, messages });
 }
 
 async function handleSend() {
@@ -1163,6 +1278,7 @@ function autosize() {
 inputEl.addEventListener('input', autosize);
 
 debateBtn.addEventListener('click', async () => {
+  if (mode === 'solo') { statusEl.textContent = 'Debate is a Room-mode feature. Switch to Room to let them argue.'; return; }
   if (!lastTopic) { statusEl.textContent = 'Ask something first, then let them debate it.'; return; }
   const targets = Array.from(activeSet);
   if (targets.length < 2) { statusEl.textContent = 'Bring at least two philosophers into the room to debate.'; return; }
@@ -1195,7 +1311,7 @@ loadSettings();
 addMessage(
   'The Room',
   null,
-  'Four minds are present: Plato, Nietzsche, Descartes, and Marcus Aurelius. Ask a question in the box below, or tap the microphone. Toggle who is in the room by tapping the cards above. Press "Let them debate it" and they will take up positions against one another using their own doctrines as weapons.',
+  'Four minds are present: Plato, Nietzsche, Descartes, and Marcus Aurelius. Two modes: in Room, ask a question and every active philosopher responds — then press "Let them debate it" and they will take up positions against one another using their own doctrines as weapons. In Solo, tap a card and speak with one philosopher alone. Toggle mode in the bar below the composer. Ask by typing or tap the microphone.',
   false
 );
 if (engineSel.value === 'omni') refreshOmniProfiles(true);
