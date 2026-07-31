@@ -1,11 +1,15 @@
-// Vercel serverless function — proxy to Anthropic Messages API, with Gemini and Groq fallback.
+// Vercel serverless function — proxy to Anthropic Messages API, with Gemini, Groq,
+// Cerebras, and OpenRouter fallback (tried in that order, first configured key wins
+// per request; on failure it falls through to the next).
 // Accepts: { system: "<persona system prompt>", messages: [{role, content}, ...] }
 //     or:  { prompt: "<one big string>" }   (legacy fallback)
 //
 // Backend selection (on the server, never client-visible):
 //   - If ANTHROPIC_API_KEY is set → Anthropic Messages API (claude-haiku-4-5)
-//   - Else if GEMINI_API_KEY is set → Google Gemini (gemini-2.5-flash)
+//   - Else if GEMINI_API_KEY is set → Google Gemini (gemini-flash-latest)
 //   - Else if GROQ_API_KEY is set → Groq (llama-3.3-70b-versatile)
+//   - Else if CEREBRAS_API_KEY is set → Cerebras Cloud (llama-3.3-70b)
+//   - Else if OPENROUTER_API_KEY is set → OpenRouter (free-tier model)
 //   - Else → 500 with a hint to set one on Vercel.
 //
 // Set keys in Vercel → Project → Settings → Environment Variables, then
@@ -17,13 +21,15 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const geminiKey    = process.env.GEMINI_API_KEY;
-  const groqKey      = process.env.GROQ_API_KEY;
+  const anthropicKey  = process.env.ANTHROPIC_API_KEY;
+  const geminiKey     = process.env.GEMINI_API_KEY;
+  const groqKey       = process.env.GROQ_API_KEY;
+  const cerebrasKey   = process.env.CEREBRAS_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
 
-  if (!anthropicKey && !geminiKey && !groqKey) {
+  if (!anthropicKey && !geminiKey && !groqKey && !cerebrasKey && !openrouterKey) {
     res.status(500).json({
-      error: "No provider key set on the server. Add ANTHROPIC_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy."
+      error: "No provider key set on the server. Add ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, or OPENROUTER_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy."
     });
     return;
   }
@@ -82,9 +88,33 @@ module.exports = async function handler(req, res) {
       const gr = await callGroq({ apiKey: groqKey, system, messages, maxTokens });
       if (gr.error) {
         errors.push(gr.error);
+        // fall through to Cerebras
       } else {
         reply = gr.reply;
         backend = "groq";
+      }
+    }
+
+    // ── Cerebras fourth ──────────────────────────────────────────────────────
+    if (!reply && cerebrasKey) {
+      const ce = await callCerebras({ apiKey: cerebrasKey, system, messages, maxTokens, model: body.cerebrasModel });
+      if (ce.error) {
+        errors.push(ce.error);
+        // fall through to OpenRouter
+      } else {
+        reply = ce.reply;
+        backend = "cerebras";
+      }
+    }
+
+    // ── OpenRouter fifth ─────────────────────────────────────────────────────
+    if (!reply && openrouterKey) {
+      const or = await callOpenRouter({ apiKey: openrouterKey, system, messages, maxTokens, model: body.openrouterModel });
+      if (or.error) {
+        errors.push(or.error);
+      } else {
+        reply = or.reply;
+        backend = "openrouter";
       }
     }
 
@@ -231,6 +261,87 @@ async function callGroq({ apiKey, system, messages, maxTokens }) {
   const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
   if (!reply) {
     return { status: 502, error: "Empty Groq reply (finish_reason=" + (data.choices && data.choices[0] && data.choices[0].finish_reason || "?") + ")." };
+  }
+  return { reply };
+}
+
+async function callCerebras({ apiKey, system, messages, maxTokens, model }) {
+  // Cerebras Cloud is OpenAI-compatible.
+  const cerebrasMessages = system
+    ? [{ role: "system", content: system }, ...messages]
+    : messages;
+
+  const upstream = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "authorization": "Bearer " + apiKey
+    },
+    body: JSON.stringify({
+      model: (typeof model === "string" && model) || "llama-3.3-70b",
+      max_tokens: maxTokens,
+      messages: cerebrasMessages
+    })
+  });
+
+  const raw = await upstream.text();
+  if (!upstream.ok) {
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      detail = (parsed && parsed.error && (parsed.error.message || parsed.error.type)) || raw;
+    } catch (e) { /* keep raw */ }
+    return { status: upstream.status, error: "Cerebras " + upstream.status + ": " + String(detail).slice(0, 500) };
+  }
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (e) { return { status: 502, error: "Non-JSON Cerebras response: " + raw.slice(0, 300) }; }
+
+  const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
+  if (!reply) {
+    return { status: 502, error: "Empty Cerebras reply (finish_reason=" + (data.choices && data.choices[0] && data.choices[0].finish_reason || "?") + ")." };
+  }
+  return { reply };
+}
+
+async function callOpenRouter({ apiKey, system, messages, maxTokens, model }) {
+  // OpenRouter is OpenAI-compatible; default to a free-tier model so this fallback
+  // never incurs cost even if it ends up carrying traffic for a while.
+  const openrouterMessages = system
+    ? [{ role: "system", content: system }, ...messages]
+    : messages;
+
+  const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "authorization": "Bearer " + apiKey,
+      "HTTP-Referer": "https://philo-gorillas.vercel.app",
+      "X-Title": "Four Minds"
+    },
+    body: JSON.stringify({
+      model: (typeof model === "string" && model) || "meta-llama/llama-3.3-70b-instruct:free",
+      max_tokens: maxTokens,
+      messages: openrouterMessages
+    })
+  });
+
+  const raw = await upstream.text();
+  if (!upstream.ok) {
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      detail = (parsed && parsed.error && (parsed.error.message || parsed.error.type)) || raw;
+    } catch (e) { /* keep raw */ }
+    return { status: upstream.status, error: "OpenRouter " + upstream.status + ": " + String(detail).slice(0, 500) };
+  }
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (e) { return { status: 502, error: "Non-JSON OpenRouter response: " + raw.slice(0, 300) }; }
+
+  const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
+  if (!reply) {
+    return { status: 502, error: "Empty OpenRouter reply (finish_reason=" + (data.choices && data.choices[0] && data.choices[0].finish_reason || "?") + ")." };
   }
   return { reply };
 }
