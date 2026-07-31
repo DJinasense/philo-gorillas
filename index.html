@@ -1197,6 +1197,7 @@ modeRoomBtn.addEventListener('click', () => { mode = 'room'; applyMode(); saveSe
 modeSoloBtn.addEventListener('click', () => { mode = 'solo'; applyMode(); saveSettings(); });
 
 /* -------- Browser TTS -------- */
+const voiceAssignment = {};
 function loadVoices() {
   voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
   assignVoices(langSel.value);
@@ -1214,7 +1215,6 @@ if ('speechSynthesis' in window) {
    run their hint list in order and take the first hint that matches a voice
    not already claimed by another persona. Falls back to any male voice,
    then any voice. Locale-first so multi-language selections still work. */
-const voiceAssignment = {};
 function assignVoices(lang) {
   if (!voices.length) { for (const k of Object.keys(PERSONAS)) voiceAssignment[k] = null; return; }
   const langVoices = voices.filter(v => v.lang && v.lang.slice(0,2) === lang.slice(0,2));
