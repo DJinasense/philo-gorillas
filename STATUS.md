@@ -1,7 +1,7 @@
 # Four Minds — running status & checklist
 
 Living scratchpad so we can pick up without re-deriving state. Update as things change.
-Last verified: 2026-07-31
+Last verified: 2026-08-01
 
 ## Provider chain (api/ask.js)
 
@@ -89,8 +89,14 @@ Non-secret by contrast: Stripe **price** IDs (`price_...`), model IDs, domains.
       Code also still accepts the old `CHEAPESTINFERENCE_API_KEY` name as a fallback.
       Once live, verify the model slug and swap to a cheaper one than `claude-opus-4.6`.
 - [ ] Delete leftover unused vars `Cloud_Cerebras_AI` and `CLOUD_CEREBRAS_AI`
-- [ ] Add `MAILGUN_DOMAIN` — not yet present. Value is the sending domain from
-      Mailgun → Sending → Domains (e.g. `sandboxXXXX.mailgun.org` or `mg.yourdomain.com`).
+- [ ] Add `MAILGUN_DOMAIN` — **still not reaching Production as of 2026-08-01**, even
+      though it was entered. `/api/health` now lists `similarlyNamedVars` (any var with
+      "mail" in the name) and that list came back **empty** — so it isn't a spelling
+      mismatch. Two remaining causes: the **Production checkbox was left unticked**
+      (a var scoped only to Preview/Development is invisible to the live site), or it
+      was saved without a redeploy. Check the environment checkboxes first.
+      Value is the sending domain from Mailgun → Sending → Domains
+      (e.g. `sandboxXXXX.mailgun.org` or `mg.philotalk.qd.je`).
       NOT `api.mailgun.net` — that's just the API base URL, same for every account.
 - [x] ~~`STRIPE_SECRET_KEY` added + redeployed~~
 - [ ] 🔴 **`STRIPE_SECRET_KEY` is a LIVE key (`sk_live_`)** — confirmed via /api/health.
@@ -100,6 +106,19 @@ Non-secret by contrast: Stripe **price** IDs (`price_...`), model IDs, domains.
       `price_1TzOyp2MJmIbm2RbcSoCztKG` (product `philo-gorillas`, $6/mo) belongs to
       **live** mode — test and live have separate catalogs, so a test key needs its own
       product + price. Price IDs are not secret.
+
+#### How to get a Stripe test key (recipe)
+1. dashboard.stripe.com → flip the **Test mode** switch, top right. Everything below
+   is now a parallel universe: separate products, customers, payments, logs.
+2. Developers → API keys → copy the **Secret key**, which starts `sk_test_`.
+3. Products → add a product named `philo-gorillas`, recurring, $6/month → copy its
+   new price id. It will differ from the live one; that's expected, not a mistake.
+4. Vercel → set `STRIPE_SECRET_KEY` = the `sk_test_` value, `STRIPE_PRICE_ID` = the
+   test price id. Tick **Production** so the deployed site actually sees them.
+5. Test with card `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP.
+6. At launch, swap both back to the live values. Nothing in code changes — the key
+   prefix alone decides which universe you're in, which is why `/api/health` reports
+   `stripe.mode` on every check.
 
 Reminder: env var names are **case-sensitive** and must match `process.env.X` exactly.
 This bit us once already — `Anthropic`/`Gemini` were silently ignored for weeks.
@@ -128,6 +147,22 @@ unlock rest. **6 free questions**, then **$6/mo Pro** unlocks OmniVoice characte
       checkout session endpoint + webhook to flip the user's Pro flag on payment.
       Confirm whether the key/price are test-mode or live-mode before wiring.
 
+### Domain — philotalk.qd.je (free, DigitalPlat, reg. 2026-07-31, exp. 2027-07-31)
+Registered but **not yet pointed anywhere**; all eight nameserver fields are blank and
+the domain shows a "Disabled" badge. The registrar UI exposes only nameservers — no
+DNS record editor — so the route is Vercel's nameservers, not A/CNAME records:
+
+1. Vercel → project → Settings → Domains → Add `philotalk.qd.je`
+2. Vercel offers "Vercel Nameservers" for domains registered elsewhere. Take those two
+   values (`ns1.vercel-dns.com` / `ns2.vercel-dns.com` at time of writing — **use what
+   the dashboard shows**, they version these).
+3. Paste into NAME SERVER 1 and 2 at DigitalPlat → Update nameservers. Leave 3–8 blank.
+4. Propagation is minutes to ~24h. Vercel issues the TLS cert automatically once NS
+   resolve. Add `www` as a redirect to the apex while you're in there.
+
+Once live this also gives Mailgun a real sending domain (`mg.philotalk.qd.je`), which
+removes the sandbox Authorized-Recipients restriction on verification email.
+
 ### Known non-issues (don't re-investigate)
 - OmniVoice already falls back to browser SpeechSynthesis if unreachable — Pro users
   never get silence, just a generic voice. Working as designed.
@@ -136,3 +171,17 @@ unlock rest. **6 free questions**, then **$6/mo Pro** unlocks OmniVoice characte
 - Fixed 2026-07-31 (`3af7c54`): a TDZ crash on `voiceAssignment` was halting the whole
   inline script before any listener attached — that's why the theme toggle and every
   other button appeared dead.
+- Fixed 2026-08-01 (`6bfb5e0`): `speak()` ran `if (!isPro()) { showProModal(); return; }`
+  before dispatching to either engine, so the Pro modal intercepted **browser** voices
+  too and the app was mute for every visitor — and for us. The gate now lives inside the
+  `omni` branch only. Verified live: asked a question with audio on and no Pro flag set;
+  no modal, `speechSynthesis.speaking === true`.
+- `?pro=1` on any URL turns Pro on for that browser, `?pro=0` turns it off. Owner
+  convenience for testing both views. Not security — Pro is still just a localStorage
+  flag, and stays that way until entitlement is checked server-side.
+
+### Where "login" stands
+There is still **no account system**. `#formSignUp` / `#formSignIn` render but the submit
+buttons have no handlers, and `#proModalCta` only fires an `alert()` placeholder. So there
+is nothing to log into and no credential to forget — the DB landing is what unblocks
+building it for real.
