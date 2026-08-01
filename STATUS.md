@@ -17,7 +17,7 @@ model/billing errors instead, which means auth passed).
 | 3 | Groq | `GROQ_API_KEY` | ✅ Working |
 | 4 | Cerebras | `CEREBRAS_API_KEY` | ❌ Blocked — 402 "Payment required… visit your billing tab". Key fine, account has no quota. |
 | 5 | OpenRouter | `OPENROUTER_API_KEY` | ✅ Working (`openai/gpt-oss-20b:free`) |
-| 6 | CheapestInference | `CHEAPESTINFERENCE_API_KEY` | ⚠️ Untested — awaiting correct env var name + model slug |
+| 6 | CheapestInference | `CHEAPESTINFERENCE_API_KEY` | ❌ 401 Invalid API key. Var name is correct (provider is reached); the **value** is rejected. Their key should start with `sk-`. |
 
 Net: **3 of 6 live.** Site answers fine today via Gemini.
 
@@ -60,13 +60,17 @@ diagnostic we have.
       plaintext into a chat screenshot on 2026-07-31 and should be considered burned.
 
 ### Vercel housekeeping
-- [ ] **Rename the CheapInference var → `CHEAPESTINFERENCE_API_KEY`** (exact, all caps).
-      Optionally add `CHEAPESTINFERENCE_MODEL` once the right slug is known.
+- [x] ~~Rename the CheapInference var → `CHEAPESTINFERENCE_API_KEY`~~ done, name verified live
+- [ ] **Fix the `CHEAPESTINFERENCE_API_KEY` value** — currently 401s. Get the subscriber
+      key (starts with `sk-`) from the cheapestinference.com dashboard; confirm the
+      subscription is active. Model slug still unverifiable until auth works.
 - [ ] Delete leftover unused vars `Cloud_Cerebras_AI` and `CLOUD_CEREBRAS_AI`
 - [ ] Add `MAILGUN_DOMAIN` — not yet present. Value is the sending domain from
       Mailgun → Sending → Domains (e.g. `sandboxXXXX.mailgun.org` or `mg.yourdomain.com`).
       NOT `api.mailgun.net` — that's just the API base URL, same for every account.
-- [ ] Add `STRIPE_SECRET_KEY` + `STRIPE_PRICE_ID` when ready (see below)
+- [x] ~~`STRIPE_SECRET_KEY` added + redeployed~~
+- [ ] Add `STRIPE_PRICE_ID` = `price_1TzOyp2MJmIbm2RbcSoCztKG` if not already set
+      (Stripe product catalog name: `philo-gorillas`). Price IDs are not secret.
 
 Reminder: env var names are **case-sensitive** and must match `process.env.X` exactly.
 This bit us once already — `Anthropic`/`Gemini` were silently ignored for weeks.
@@ -81,10 +85,10 @@ unlock rest. **6 free questions**, then **$6/mo Pro** unlocks OmniVoice characte
 - [ ] Mailgun send + verification-token endpoints
 - [ ] Wire the existing UI — `#formSignUp`, `#formSignIn`, `#proModal` already exist in
       index.html but **the signup submit button has no handler at all**. Not a bug; unbuilt.
-- [ ] Stripe checkout. Price ID: Dashboard → Product catalog → product → price row
-      (`price_...`, not secret, safe to share). Secret key: Developers → API keys
-      (`sk_...`, **never** in chat or a committed file — Vercel env var only).
-      Start in test mode.
+- [ ] Stripe checkout. Product `philo-gorillas`, price `price_1TzOyp2MJmIbm2RbcSoCztKG`
+      ($6/mo). Secret key already in Vercel as `STRIPE_SECRET_KEY`. Still to build:
+      checkout session endpoint + webhook to flip the user's Pro flag on payment.
+      Confirm whether the key/price are test-mode or live-mode before wiring.
 
 ### Known non-issues (don't re-investigate)
 - OmniVoice already falls back to browser SpeechSynthesis if unreachable — Pro users
