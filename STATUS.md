@@ -5,8 +5,8 @@ Last verified: 2026-07-31
 
 ## Provider chain (api/ask.js)
 
-Order: Anthropic → Gemini → Groq → Cerebras → OpenRouter.
-All five keys are VALID and correctly named in Vercel. Verified by forcing each
+Order: Anthropic → Gemini → Groq → Cerebras → OpenRouter → CheapestInference.
+Keys 1–5 are VALID and correctly named in Vercel. Verified by forcing each
 provider to fail and reading its error (auth errors would be 401; we got 400/402/404
 model/billing errors instead, which means auth passed).
 
@@ -17,8 +17,12 @@ model/billing errors instead, which means auth passed).
 | 3 | Groq | `GROQ_API_KEY` | ✅ Working |
 | 4 | Cerebras | `CEREBRAS_API_KEY` | ❌ Blocked — 402 "Payment required… visit your billing tab". Key fine, account has no quota. |
 | 5 | OpenRouter | `OPENROUTER_API_KEY` | ✅ Working (`openai/gpt-oss-20b:free`) |
+| 6 | CheapestInference | `CHEAPESTINFERENCE_API_KEY` | ⚠️ Untested — awaiting correct env var name + model slug |
 
-Net: **3 of 5 live.** Site answers fine today via Gemini.
+Net: **3 of 6 live.** Site answers fine today via Gemini.
+
+**CheapestInference is PAID** (flat $14.99/mo), which is why it sits last — it only
+bills when all five free providers above have failed. Don't mistake it for free backup.
 
 ### Model IDs — do not guess these, they drift
 - Anthropic: `claude-haiku-4-5`
@@ -28,6 +32,12 @@ Net: **3 of 5 live.** Site answers fine today via Gemini.
   `llama-4-scout-17b-16e-instruct`, `llama-3.3-70b`) all 404 for this account
 - OpenRouter: `openai/gpt-oss-20b:free` — `:free` variants get retired without notice.
   Re-list with: `curl https://openrouter.ai/api/v1/models`
+- CheapestInference: **slug unconfirmed.** Base URL `https://api.cheapestinference.com/v1`,
+  OpenAI-compatible. Their docs pages 404 and `/v1/models` needs auth, so the slugs
+  behind the advertised names (Kimi K3, Kimi K2.7, GLM 5.2, MiniMax M3, DeepSeek V4
+  Flash, MiMo v2.5) are guesses. Code defaults to `deepseek-v4-flash` but reads
+  `CHEAPESTINFERENCE_MODEL` first — so a wrong guess is fixable in Vercel with no
+  code change.
 
 ### How to test the chain without touching Vercel
 `api/ask.js` accepts per-provider model overrides, so you can force fallthrough:
@@ -50,6 +60,8 @@ diagnostic we have.
       plaintext into a chat screenshot on 2026-07-31 and should be considered burned.
 
 ### Vercel housekeeping
+- [ ] **Rename the CheapInference var → `CHEAPESTINFERENCE_API_KEY`** (exact, all caps).
+      Optionally add `CHEAPESTINFERENCE_MODEL` once the right slug is known.
 - [ ] Delete leftover unused vars `Cloud_Cerebras_AI` and `CLOUD_CEREBRAS_AI`
 - [ ] Add `MAILGUN_DOMAIN` — not yet present. Value is the sending domain from
       Mailgun → Sending → Domains (e.g. `sandboxXXXX.mailgun.org` or `mg.yourdomain.com`).
