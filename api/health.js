@@ -96,15 +96,18 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Live probe: smallest possible request to each provider, in parallel.
-  const probe = [{ role: "user", content: "hi" }];
+  // Live probe: small request to each provider, in parallel.
+  // maxTokens must leave real headroom — reasoning models spend tokens before
+  // emitting any text, so too low a ceiling reports a healthy provider as failed.
+  const probe = [{ role: "user", content: "Reply with the single word: ok" }];
+  const T = 256;
   const runners = {
-    anthropic:        k => ask.callAnthropic({ apiKey: k, system: "", messages: probe, maxTokens: 8 }),
-    gemini:           k => ask.callGemini({ apiKey: k, system: "", messages: probe, maxTokens: 8 }),
-    groq:             k => ask.callGroq({ apiKey: k, system: "", messages: probe, maxTokens: 8 }),
-    cerebras:         k => ask.callCerebras({ apiKey: k, system: "", messages: probe, maxTokens: 8 }),
-    openrouter:       k => ask.callOpenRouter({ apiKey: k, system: "", messages: probe, maxTokens: 8 }),
-    cheaperinference: k => ask.callCheaperInference({ apiKey: k, system: "", messages: probe, maxTokens: 8 })
+    anthropic:        k => ask.callAnthropic({ apiKey: k, system: "", messages: probe, maxTokens: T }),
+    gemini:           k => ask.callGemini({ apiKey: k, system: "", messages: probe, maxTokens: T }),
+    groq:             k => ask.callGroq({ apiKey: k, system: "", messages: probe, maxTokens: T }),
+    cerebras:         k => ask.callCerebras({ apiKey: k, system: "", messages: probe, maxTokens: T }),
+    openrouter:       k => ask.callOpenRouter({ apiKey: k, system: "", messages: probe, maxTokens: T }),
+    cheaperinference: k => ask.callCheaperInference({ apiKey: k, system: "", messages: probe, maxTokens: T })
   };
 
   await Promise.all(providers.map(async (p, i) => {
