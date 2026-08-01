@@ -278,7 +278,9 @@ async function callCerebras({ apiKey, system, messages, maxTokens, model }) {
       "authorization": "Bearer " + apiKey
     },
     body: JSON.stringify({
-      model: (typeof model === "string" && model) || "llama-3.3-70b",
+      // gpt-oss-120b is the model this account has access to; other Cerebras
+      // slugs (llama3.1-8b, qwen-3-32b, llama-4-scout) return 404 for us.
+      model: (typeof model === "string" && model) || "gpt-oss-120b",
       max_tokens: maxTokens,
       messages: cerebrasMessages
     })
@@ -320,7 +322,9 @@ async function callOpenRouter({ apiKey, system, messages, maxTokens, model }) {
       "X-Title": "Four Minds"
     },
     body: JSON.stringify({
-      model: (typeof model === "string" && model) || "meta-llama/llama-3.3-70b-instruct:free",
+      // Verified free-tier slug. OpenRouter retires ":free" variants periodically —
+      // if this 404s, list current ones with: curl https://openrouter.ai/api/v1/models
+      model: (typeof model === "string" && model) || "openai/gpt-oss-20b:free",
       max_tokens: maxTokens,
       messages: openrouterMessages
     })
