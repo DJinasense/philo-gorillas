@@ -62,6 +62,15 @@ diagnostic we have.
       just need activating). Also **rotate this key** — the old value was pasted in
       plaintext into a chat screenshot on 2026-07-31 and should be considered burned.
 
+### 🔴 Rotate these — exposed in chat 2026-07-31
+- [ ] `ANTHROPIC_API_KEY` — an `sk-ant-api03-...` value was pasted into a chat window.
+      Revoke at console.anthropic.com → API Keys, issue a new one, update Vercel.
+- [ ] `CEREBRAS_API_KEY` — a `csk-...` value appeared in a screenshot. Same drill.
+
+Rule going forward: secrets go provider site → Vercel directly. Never into chat, never
+into a file in this repo. Only the variable *name* is ever needed in conversation.
+Non-secret by contrast: Stripe **price** IDs (`price_...`), model IDs, domains.
+
 ### Vercel housekeeping
 - [ ] **`CHEAPERINFERENCE_API_KEY`** — key was deleted and is being re-added under the
       correct name. Value must start with `ir_live_` (from cheaperinference.com).
