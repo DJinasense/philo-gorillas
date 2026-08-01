@@ -10,6 +10,8 @@ Keys 1–5 are VALID and correctly named in Vercel. Verified by forcing each
 provider to fail and reading its error (auth errors would be 401; we got 400/402/404
 model/billing errors instead, which means auth passed).
 
+Verified live 2026-08-01 via `/api/health?live=1`.
+
 | # | Provider | Env var | Status |
 |---|----------|---------|--------|
 | 1 | Anthropic | `ANTHROPIC_API_KEY` | ❌ Blocked — "credit balance is too low". Key fine, account needs credits. |
@@ -17,9 +19,10 @@ model/billing errors instead, which means auth passed).
 | 3 | Groq | `GROQ_API_KEY` | ✅ Working |
 | 4 | Cerebras | `CEREBRAS_API_KEY` | ❌ Blocked — 402 "Payment required… visit your billing tab". Key fine, account has no quota. |
 | 5 | OpenRouter | `OPENROUTER_API_KEY` | ✅ Working (`openai/gpt-oss-20b:free`) |
-| 6 | CheaperInference | `CHEAPERINFERENCE_API_KEY` | ⚠️ Awaiting key. Keys are prefixed `ir_live_`. |
+| 6 | CheaperInference | `CHEAPERINFERENCE_API_KEY` | ✅ Working (`claude-opus-4.6`) |
 
-Net: **3 of 6 live.** Site answers fine today via Gemini.
+Net: **4 of 6 live.** Gemini serves normal traffic. Only the two paid-account
+providers are down, and both need money, not fixes.
 
 **CheaperInference is PAID** (per-token, ~30% below list), which is why it sits last —
 it only bills when all five free providers above have failed. Not free backup.
@@ -90,19 +93,26 @@ Non-secret by contrast: Stripe **price** IDs (`price_...`), model IDs, domains.
       Mailgun → Sending → Domains (e.g. `sandboxXXXX.mailgun.org` or `mg.yourdomain.com`).
       NOT `api.mailgun.net` — that's just the API base URL, same for every account.
 - [x] ~~`STRIPE_SECRET_KEY` added + redeployed~~
-- [ ] Add `STRIPE_PRICE_ID` = `price_1TzOyp2MJmIbm2RbcSoCztKG` if not already set
-      (Stripe product catalog name: `philo-gorillas`). Price IDs are not secret.
+- [ ] 🔴 **`STRIPE_SECRET_KEY` is a LIVE key (`sk_live_`)** — confirmed via /api/health.
+      Building checkout against it means the first test charges a real card. Swap for a
+      `sk_test_` key while developing, then flip back at launch.
+- [ ] `STRIPE_PRICE_ID` is not set in Vercel at all. The known price
+      `price_1TzOyp2MJmIbm2RbcSoCztKG` (product `philo-gorillas`, $6/mo) belongs to
+      **live** mode — test and live have separate catalogs, so a test key needs its own
+      product + price. Price IDs are not secret.
 
 Reminder: env var names are **case-sensitive** and must match `process.env.X` exactly.
 This bit us once already — `Anthropic`/`Gemini` were silently ignored for weeks.
 One redeploy at the end covers all edits.
 
-### Database
-Connected via the Vercel Postgres/Neon integration with custom prefix `philo_gorillas`,
-so the auto-created vars are named `philo_gorillas_*` (e.g. `philo_gorillas_URL`) rather
-than the usual `POSTGRES_*`. **Check the exact names in Vercel → Settings → Environment
-Variables before writing any DB code** — don't assume the standard names. Credentials are
-wired in automatically; nothing to copy by hand.
+### Database — ✅ CONNECTED
+Vercel Postgres/Neon integration, custom prefix `philo_gorillas`. Confirmed present:
+- `philo_gorillas_DATABASE_URL`
+- `philo_gorillas_POSTGRES_URL`
+- `philo_gorillas_PRISMA_DATABASE_URL`
+
+Note these are **not** the usual `POSTGRES_*` names, so libraries that auto-detect
+will not find them — pass the connection string explicitly.
 
 ### Freemium / Pro feature — NOT STARTED
 Design (per dreaminterpreter.ai model): read answer halfway → signup → verify email →
