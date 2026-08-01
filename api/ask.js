@@ -28,9 +28,13 @@ module.exports = async function handler(req, res) {
   const groqKey       = process.env.GROQ_API_KEY;
   const cerebrasKey   = process.env.CEREBRAS_API_KEY;
   const openrouterKey = process.env.OPENROUTER_API_KEY;
-  // Accept the misspelled variant too — the var was originally created as
-  // CHEAPESTINFERENCE_* before we learned the service is cheaperinference.com.
-  const cheaperKey    = process.env.CHEAPERINFERENCE_API_KEY || process.env.CHEAPESTINFERENCE_API_KEY;
+  // The service is cheaperinference.com, but this var has been created under a few
+  // spellings along the way. Accept all of them — a name mismatch here fails silently
+  // (the provider is just skipped), which is exactly the bug that kept ANTHROPIC and
+  // GEMINI dead for weeks. Not worth risking again over a variable name.
+  const cheaperKey    = process.env.CHEAPERINFERENCE_API_KEY
+                     || process.env.CHEAPINFERENCE_API_KEY
+                     || process.env.CHEAPESTINFERENCE_API_KEY;
 
   if (!anthropicKey && !geminiKey && !groqKey && !cerebrasKey && !openrouterKey && !cheaperKey) {
     res.status(500).json({
