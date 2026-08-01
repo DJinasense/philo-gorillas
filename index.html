@@ -1338,9 +1338,15 @@ async function speakOmni(persona, key, text) {
 }
 function speak(persona, text, lang, key) {
   if (!audioToggle.checked) return;
-  if (!isPro()) { showProModal(); return; }
-  if (engineSel.value === 'omni') speakOmni(persona, key, text);
-  else                            speakBrowser(persona, text, lang, key);
+  /* Browser voices are free — hearing a philosopher in a generic system voice never
+     hits a wall. Only the cloned OmniVoice character voices are Pro. Gating both was
+     a bug: it made the app silent for everyone, including us. */
+  if (engineSel.value === 'omni') {
+    if (!isPro()) { showProModal(); return; }
+    speakOmni(persona, key, text);
+  } else {
+    speakBrowser(persona, text, lang, key);
+  }
 }
 
 /* -------- Speech recognition -------- */
@@ -1545,6 +1551,15 @@ debateBtn.addEventListener('click', async () => {
 /* -------- Freemium helpers -------- */
 const PRO_KEY = 'four-minds:pro';
 function isPro() { return !!localStorage.getItem(PRO_KEY); }
+/* Owner unlock: ?pro=1 turns Pro on for this browser, ?pro=0 turns it off again.
+   Deliberately not security — Pro is a localStorage flag until entitlement moves
+   server-side with accounts + Stripe. This just lets us test the Pro path without
+   a checkout, and lets us drop back to the free view to see what a visitor sees. */
+(function proUrlOverride() {
+  const flag = new URLSearchParams(location.search).get('pro');
+  if (flag === '1') localStorage.setItem(PRO_KEY, '1');
+  if (flag === '0') localStorage.removeItem(PRO_KEY);
+})();
 function showProModal() {
   const m = document.getElementById('proModal');
   m.classList.add('open');

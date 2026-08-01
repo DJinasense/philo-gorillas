@@ -2,3 +2,11 @@
 node_modules/
 .vercel
 .DS_Store
+
+# Local notes that hold real API keys. GitHub push protection caught these once
+# already — keep them out of the index so a stray `git add -A` can't stage them.
+IPA*.txt
+*secret*.txt
+*keys*.txt
+.env
+.env.*

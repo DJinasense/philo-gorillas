@@ -57,7 +57,12 @@ module.exports = async function handler(req, res) {
       MAILGUN_API_KEY: present("MAILGUN_API_KEY"),
       MAILGUN_DOMAIN:  present("MAILGUN_DOMAIN"),
       ready: present("MAILGUN_API_KEY") && present("MAILGUN_DOMAIN"),
-      note: present("MAILGUN_DOMAIN") ? undefined : "MAILGUN_DOMAIN missing — verification email cannot send."
+      // Names only, never values. When a var "was definitely added" but reads as
+      // missing, it is almost always spelled differently — this shows the spelling.
+      similarlyNamedVars: Object.keys(process.env)
+        .filter(k => /mail|mg_/i.test(k) && k !== "MAILGUN_API_KEY" && k !== "MAILGUN_DOMAIN")
+        .sort(),
+      note: present("MAILGUN_DOMAIN") ? undefined : "MAILGUN_DOMAIN missing — verification email cannot send. Check similarlyNamedVars for a spelling mismatch, and confirm a redeploy happened after adding it."
     },
     stripe: {
       STRIPE_SECRET_KEY: present("STRIPE_SECRET_KEY"),
