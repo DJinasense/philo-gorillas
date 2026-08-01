@@ -151,6 +151,15 @@ module.exports = async function handler(req, res) {
   }
 };
 
+// Exported so /api/health can probe each provider individually without
+// duplicating any of this. Vercel still uses the default export as the handler.
+module.exports.callAnthropic       = callAnthropic;
+module.exports.callGemini          = callGemini;
+module.exports.callGroq            = callGroq;
+module.exports.callCerebras        = callCerebras;
+module.exports.callOpenRouter      = callOpenRouter;
+module.exports.callCheaperInference = callCheaperInference;
+
 // ── Provider implementations ─────────────────────────────────────────────────
 
 async function callAnthropic({ apiKey, system, messages, maxTokens, model }) {

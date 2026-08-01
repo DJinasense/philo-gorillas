@@ -42,6 +42,15 @@ with near-identical names. We are on **cheaper**. Keys are prefixed `ir_live_`.
   no code change needed. **Worth switching to a cheaper slug once we can read the
   live catalog.**
 
+### Admin health check
+`/api/health` — instant, free, shows which env vars are present, which variable name
+each provider is actually reading, a masked key fingerprint, Stripe test-vs-live mode,
+and whether the DB vars landed. Never returns a secret value.
+
+`/api/health?live=1` — also pings every AI provider (~10 tokens each) and reports
+OK/FAIL per provider with the error text. This is the fastest way to answer
+"is everything actually working right now?"
+
 ### How to test the chain without touching Vercel
 `api/ask.js` accepts per-provider model overrides, so you can force fallthrough:
 
