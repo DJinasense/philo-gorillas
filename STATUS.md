@@ -180,6 +180,16 @@ removes the sandbox Authorized-Recipients restriction on verification email.
   convenience for testing both views. Not security — Pro is still just a localStorage
   flag, and stays that way until entitlement is checked server-side.
 
+### Diagnosed, deliberately not yet fixed
+**Sign-in dropdown renders behind the chat.** `#loginDropdown` has `z-index: 500`, which
+looks like it should win but doesn't: line 133 sets `header, .layout, .composer
+{ position: relative; z-index: 1 }`. `header` therefore opens its own stacking context,
+so the dropdown's 500 only competes *inside* the header — and against sibling `.layout`
+at the same z-index 1, the later element in the DOM paints on top. Fix is one line:
+give `header` a higher z-index than `.layout`/`.composer` (e.g. `header { z-index: 10 }`)
+rather than raising the dropdown. Held off 2026-08-01 at user's request — login is
+unbuilt, so the dropdown has nothing behind it yet.
+
 ### Where "login" stands
 There is still **no account system**. `#formSignUp` / `#formSignIn` render but the submit
 buttons have no handlers, and `#proModalCta` only fires an `alert()` placeholder. So there
