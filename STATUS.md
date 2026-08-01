@@ -88,6 +88,13 @@ Reminder: env var names are **case-sensitive** and must match `process.env.X` ex
 This bit us once already — `Anthropic`/`Gemini` were silently ignored for weeks.
 One redeploy at the end covers all edits.
 
+### Database
+Connected via the Vercel Postgres/Neon integration with custom prefix `philo_gorillas`,
+so the auto-created vars are named `philo_gorillas_*` (e.g. `philo_gorillas_URL`) rather
+than the usual `POSTGRES_*`. **Check the exact names in Vercel → Settings → Environment
+Variables before writing any DB code** — don't assume the standard names. Credentials are
+wired in automatically; nothing to copy by hand.
+
 ### Freemium / Pro feature — NOT STARTED
 Design (per dreaminterpreter.ai model): read answer halfway → signup → verify email →
 unlock rest. **6 free questions**, then **$6/mo Pro** unlocks OmniVoice character voices.
