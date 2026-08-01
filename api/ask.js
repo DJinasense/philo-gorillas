@@ -1,5 +1,5 @@
 // Vercel serverless function — proxy to Anthropic Messages API, with Gemini, Groq,
-// Cerebras, OpenRouter, and CheapestInference fallback (tried in that order, first
+// Cerebras, OpenRouter, and CheaperInference fallback (tried in that order, first
 // configured key wins per request; on failure it falls through to the next).
 // Accepts: { system: "<persona system prompt>", messages: [{role, content}, ...] }
 //     or:  { prompt: "<one big string>" }   (legacy fallback)
@@ -10,7 +10,7 @@
 //   - Else if GROQ_API_KEY is set → Groq (llama-3.3-70b-versatile)
 //   - Else if CEREBRAS_API_KEY is set → Cerebras Cloud (llama-3.3-70b)
 //   - Else if OPENROUTER_API_KEY is set → OpenRouter (free-tier model)
-//   - Else if CHEAPESTINFERENCE_API_KEY is set → cheapestinference.com (PAID — last
+//   - Else if CHEAPERINFERENCE_API_KEY is set → cheaperinference.com (PAID — last
 //     on purpose, so it only bills when every free provider above is down)
 //   - Else → 500 with a hint to set one on Vercel.
 //
@@ -28,11 +28,13 @@ module.exports = async function handler(req, res) {
   const groqKey       = process.env.GROQ_API_KEY;
   const cerebrasKey   = process.env.CEREBRAS_API_KEY;
   const openrouterKey = process.env.OPENROUTER_API_KEY;
-  const cheapestKey   = process.env.CHEAPESTINFERENCE_API_KEY;
+  // Accept the misspelled variant too — the var was originally created as
+  // CHEAPESTINFERENCE_* before we learned the service is cheaperinference.com.
+  const cheaperKey    = process.env.CHEAPERINFERENCE_API_KEY || process.env.CHEAPESTINFERENCE_API_KEY;
 
-  if (!anthropicKey && !geminiKey && !groqKey && !cerebrasKey && !openrouterKey && !cheapestKey) {
+  if (!anthropicKey && !geminiKey && !groqKey && !cerebrasKey && !openrouterKey && !cheaperKey) {
     res.status(500).json({
-      error: "No provider key set on the server. Add ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, OPENROUTER_API_KEY, or CHEAPESTINFERENCE_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy."
+      error: "No provider key set on the server. Add ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, OPENROUTER_API_KEY, or CHEAPERINFERENCE_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy."
     });
     return;
   }
@@ -115,23 +117,23 @@ module.exports = async function handler(req, res) {
       const or = await callOpenRouter({ apiKey: openrouterKey, system, messages, maxTokens, model: body.openrouterModel });
       if (or.error) {
         errors.push(or.error);
-        // fall through to CheapestInference
+        // fall through to CheaperInference
       } else {
         reply = or.reply;
         backend = "openrouter";
       }
     }
 
-    // ── CheapestInference last ───────────────────────────────────────────────
-    // Deliberately last: this one is a paid subscription, so it only carries
-    // traffic when every free provider above has failed.
-    if (!reply && cheapestKey) {
-      const ch = await callCheapestInference({ apiKey: cheapestKey, system, messages, maxTokens, model: body.cheapestModel });
+    // ── CheaperInference last ────────────────────────────────────────────────
+    // Deliberately last: this one is paid per token, so it only carries traffic
+    // when every free provider above has failed.
+    if (!reply && cheaperKey) {
+      const ch = await callCheaperInference({ apiKey: cheaperKey, system, messages, maxTokens, model: body.cheaperModel });
       if (ch.error) {
         errors.push(ch.error);
       } else {
         reply = ch.reply;
-        backend = "cheapestinference";
+        backend = "cheaperinference";
       }
     }
 
@@ -367,21 +369,22 @@ async function callOpenRouter({ apiKey, system, messages, maxTokens, model }) {
   return { reply };
 }
 
-async function callCheapestInference({ apiKey, system, messages, maxTokens, model }) {
-  // cheapestinference.com — OpenAI-compatible, flat-rate paid subscription.
-  // Their docs don't publish the model slugs and /v1/models needs auth, so the
-  // default below is overridable via CHEAPESTINFERENCE_MODEL without a redeploy
-  // of this file. Advertised models: Kimi K3, Kimi K2.7, GLM 5.2, MiniMax M3,
-  // DeepSeek V4 Flash, MiMo v2.5.
-  const cheapestMessages = system
+async function callCheaperInference({ apiKey, system, messages, maxTokens, model }) {
+  // cheaperinference.com — OpenAI-compatible reseller of OpenAI/Anthropic/Google
+  // models at a discount. Keys are prefixed "ir_live_".
+  // Full model catalog is only available from /v1/models (needs auth), so the
+  // default below is overridable via CHEAPERINFERENCE_MODEL without a code change.
+  // claude-opus-4.6 is taken from their own documented example, so it is known-good;
+  // swap it for something cheaper once we can read the live catalog.
+  const cheaperMessages = system
     ? [{ role: "system", content: system }, ...messages]
     : messages;
 
   const modelId = (typeof model === "string" && model)
-    || process.env.CHEAPESTINFERENCE_MODEL
-    || "deepseek-v4-flash";
+    || process.env.CHEAPERINFERENCE_MODEL
+    || "claude-opus-4.6";
 
-  const upstream = await fetch("https://api.cheapestinference.com/v1/chat/completions", {
+  const upstream = await fetch("https://api.cheaperinference.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -390,7 +393,7 @@ async function callCheapestInference({ apiKey, system, messages, maxTokens, mode
     body: JSON.stringify({
       model: modelId,
       max_tokens: maxTokens,
-      messages: cheapestMessages
+      messages: cheaperMessages
     })
   });
 
@@ -401,15 +404,15 @@ async function callCheapestInference({ apiKey, system, messages, maxTokens, mode
       const parsed = JSON.parse(raw);
       detail = (parsed && parsed.error && (parsed.error.message || parsed.error.type)) || (parsed && parsed.error) || raw;
     } catch (e) { /* keep raw */ }
-    return { status: upstream.status, error: "CheapestInference " + upstream.status + " (model=" + modelId + "): " + String(detail).slice(0, 500) };
+    return { status: upstream.status, error: "CheaperInference " + upstream.status + " (model=" + modelId + "): " + String(detail).slice(0, 500) };
   }
   let data;
   try { data = JSON.parse(raw); }
-  catch (e) { return { status: 502, error: "Non-JSON CheapestInference response: " + raw.slice(0, 300) }; }
+  catch (e) { return { status: 502, error: "Non-JSON CheaperInference response: " + raw.slice(0, 300) }; }
 
   const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
   if (!reply) {
-    return { status: 502, error: "Empty CheapestInference reply (finish_reason=" + (data.choices && data.choices[0] && data.choices[0].finish_reason || "?") + ")." };
+    return { status: 502, error: "Empty CheaperInference reply (finish_reason=" + (data.choices && data.choices[0] && data.choices[0].finish_reason || "?") + ")." };
   }
   return { reply };
 }
