@@ -153,6 +153,23 @@ module.exports = async function handler(req, res) {
       const db = client();
       const rows = await db.$queryRawUnsafe("SELECT 1 AS ok");
       services.database.live = rows && rows[0] && rows[0].ok === 1 ? "OK" : "FAIL";
+
+      // Temporary feasibility check for the RAG pipeline — is pgvector installable
+      // on this managed Postgres? Safe to remove once the RAG storage decision is made.
+      try {
+        await db.$queryRawUnsafe("CREATE EXTENSION IF NOT EXISTS vector");
+        const ext = await db.$queryRawUnsafe(
+          "SELECT extname, extversion FROM pg_extension WHERE extname = 'vector'"
+        );
+        services.database.pgvector = ext && ext.length > 0
+          ? { available: true, version: ext[0].extversion }
+          : { available: false };
+      } catch (vecErr) {
+        services.database.pgvector = {
+          available: false,
+          error: String((vecErr && vecErr.message) || vecErr).slice(0, 300)
+        };
+      }
     } catch (e) {
       services.database.live = "FAIL";
       services.database.error = String((e && e.message) || e).slice(0, 300);
