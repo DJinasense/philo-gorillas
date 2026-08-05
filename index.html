@@ -1477,7 +1477,7 @@ function addThinking(label) {
    single prompt string, so on that path we flatten into one; on /api/ask we
    send the structured payload so Anthropic gets a proper system field and
    turn-by-turn messages instead of one wall of user-role text. */
-async function ask({ system, messages }) {
+async function ask({ system, messages, philosopher }) {
   if (window.cowork && window.cowork.askClaude) {
     const flat = (system ? system + '\n\n' : '') +
       messages.map(m => (m.role === 'user' ? 'USER: ' : 'ASSISTANT: ') + m.content).join('\n\n');
@@ -1493,7 +1493,7 @@ async function ask({ system, messages }) {
   const r = await fetch('/api/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ system, messages, max_tokens: 1024 })
+    body: JSON.stringify({ system, messages, philosopher, max_tokens: 1024 })
   });
   if (!r.ok) {
     let detail = '';
@@ -1531,7 +1531,7 @@ async function getReply(key, userQuestion, extraInstruction) {
   } else {
     messages.push({ role: 'user', content: userTurn });
   }
-  return ask({ system, messages });
+  return ask({ system, messages, philosopher: key });
 }
 
 async function handleSend() {

@@ -48,12 +48,31 @@ module.exports = async function handler(req, res) {
     await db.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS users_verification_token_idx ON users (verification_token)");
     await db.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS users_stripe_customer_id_idx ON users (stripe_customer_id)");
 
+    // RAG library: chunked+embedded passages from each philosopher's source text(s).
+    // embedding is 768-dim to match Gemini's text-embedding-004. See api/_rag.js.
+    await db.$executeRawUnsafe("CREATE EXTENSION IF NOT EXISTS vector");
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS passages (
+        id           BIGSERIAL PRIMARY KEY,
+        philosopher  TEXT NOT NULL,
+        source       TEXT NOT NULL,
+        chunk_index  INTEGER NOT NULL,
+        chunk_text   TEXT NOT NULL,
+        embedding    vector(768) NOT NULL,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (source, chunk_index)
+      )
+    `);
+    await db.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS passages_philosopher_idx ON passages (philosopher)");
+
     const [{ count }] = await db.$queryRawUnsafe("SELECT count(*)::int AS count FROM users");
+    const [{ count: passageCount }] = await db.$queryRawUnsafe("SELECT count(*)::int AS count FROM passages");
 
     res.status(200).json({
       ok: true,
-      message: "users table is ready.",
-      existingRowCount: count
+      message: "users and passages tables are ready.",
+      existingRowCount: count,
+      existingPassageCount: passageCount
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: String((e && e.message) || e).slice(0, 500) });

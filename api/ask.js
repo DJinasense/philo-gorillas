@@ -49,9 +49,10 @@ module.exports = async function handler(req, res) {
   }
   body = body || {};
 
-  const system    = typeof body.system === "string" ? body.system : "";
+  let   system    = typeof body.system === "string" ? body.system : "";
   let   messages  = Array.isArray(body.messages) ? body.messages : null;
   const maxTokens = Number.isInteger(body.max_tokens) ? body.max_tokens : 1024;
+  const philosopher = typeof body.philosopher === "string" ? body.philosopher : null;
 
   if (!messages) {
     if (typeof body.prompt === "string" && body.prompt.trim()) {
@@ -61,6 +62,27 @@ module.exports = async function handler(req, res) {
         error: "Request must include either { system, messages } or a legacy { prompt } string."
       });
       return;
+    }
+  }
+
+  // Ground the reply in the philosopher's own texts, when the library has been
+  // ingested for them (api/ingest.js) and a philosopher id was sent.
+  if (philosopher && geminiKey) {
+    try {
+      const { client } = require("./_db.js");
+      const { retrievePassages } = require("./_rag.js");
+      const lastUser = [...messages].reverse().find(m => m.role === "user");
+      if (lastUser && typeof lastUser.content === "string") {
+        const passages = await retrievePassages({
+          db: client(), geminiKey, philosopher, query: lastUser.content, limit: 3
+        });
+        if (passages.length) {
+          const excerpts = passages.map((p, i) => `[${i + 1}] "${p.text}"`).join("\n\n");
+          system += `\n\nRELEVANT EXCERPTS FROM YOUR OWN WRITINGS (draw on these where they fit naturally; do not quote them verbatim at length or cite bracket numbers aloud):\n\n${excerpts}`;
+        }
+      }
+    } catch (e) {
+      // RAG is a bonus, never a blocker — fall through to the ungrounded prompt.
     }
   }
 
