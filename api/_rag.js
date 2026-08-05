@@ -67,13 +67,20 @@ function allSources() {
   return list;
 }
 
-async function embedBatch(apiKey, texts) {
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=" + encodeURIComponent(apiKey);
+// text-embedding-004 and the batchEmbedContents endpoint were retired — the
+// current model is gemini-embedding-001, exposed only per-item via embedContent
+// (its batch method, asyncBatchEmbedContent, is an async job API, not a fit for
+// a synchronous serverless call). outputDimensionality:768 matches passages.embedding.
+const EMBED_MODEL = "gemini-embedding-001";
+const EMBED_DIMENSIONS = 768;
+const EMBED_CONCURRENCY = 10;
+
+async function embedOne(apiKey, text) {
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + EMBED_MODEL + ":embedContent?key=" + encodeURIComponent(apiKey);
   const body = {
-    requests: texts.map(t => ({
-      model: "models/text-embedding-004",
-      content: { parts: [{ text: t }] }
-    }))
+    model: "models/" + EMBED_MODEL,
+    content: { parts: [{ text }] },
+    outputDimensionality: EMBED_DIMENSIONS
   };
   const upstream = await fetch(url, {
     method: "POST",
@@ -83,12 +90,22 @@ async function embedBatch(apiKey, texts) {
   const raw = await upstream.text();
   if (!upstream.ok) throw new Error("Gemini embedding " + upstream.status + ": " + raw.slice(0, 500));
   const data = JSON.parse(raw);
-  return data.embeddings.map(e => e.values);
+  return data.embedding.values;
 }
 
-async function embedOne(apiKey, text) {
-  const [values] = await embedBatch(apiKey, [text]);
-  return values;
+// Embeds many texts with bounded concurrency (no true batch endpoint exists anymore).
+async function embedBatch(apiKey, texts) {
+  const results = new Array(texts.length);
+  let next = 0;
+  async function worker() {
+    while (next < texts.length) {
+      const i = next++;
+      results[i] = await embedOne(apiKey, texts[i]);
+    }
+  }
+  const workers = Array.from({ length: Math.min(EMBED_CONCURRENCY, texts.length) }, worker);
+  await Promise.all(workers);
+  return results;
 }
 
 function toVectorLiteral(values) {
