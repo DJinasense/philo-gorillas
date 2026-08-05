@@ -1,4 +1,4 @@
-const CACHE = "four-minds-v4";
+const CACHE = "four-minds-v5";
 const SHELL = [
   "./",
   "./index.html",
