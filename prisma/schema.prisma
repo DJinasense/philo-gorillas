@@ -1,0 +1,22 @@
+// Talks to Vercel's "Prisma Postgres" storage integration, which is fronted
+// entirely by Prisma's Accelerate proxy (db.prisma.io) — there is no plain
+// postgres:// endpoint exposed for this resource, only this prisma+postgres://
+// one. That's why the client needs the Accelerate extension (see api/_db.js).
+//
+// No models are declared here on purpose: api/migrate.js and api/_db.js use
+// raw SQL ($executeRawUnsafe/$queryRawUnsafe) instead of Prisma's typed query
+// API, so this schema only exists to point the generated client at the right
+// database.
+// The newer "prisma-client" generator emits ESM/TypeScript output, which doesn't
+// fit this project's plain CommonJS serverless functions (no build step). This
+// classic generator still produces a require()-able CJS client in Prisma 7.
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 removed `url` from the datasource block entirely — the connection
+// string is passed to the PrismaClient constructor in code instead (see
+// api/_db.js). This block only declares the provider.
+datasource db {
+  provider = "postgresql"
+}

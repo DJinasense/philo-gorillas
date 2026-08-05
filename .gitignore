@@ -10,3 +10,6 @@ IPA*.txt
 *keys*.txt
 .env
 .env.*
+
+.vercel
+.env*

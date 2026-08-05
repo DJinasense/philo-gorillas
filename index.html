@@ -72,7 +72,7 @@
     --paper-2:   #211D18;
     --ink:       #E8DDD0;
     --ink-2:     #B8A898;
-    --muted:     #7A6E60;
+    --muted:     #9A8C78;
     --line:      #2E2820;
     --line-2:    #3A3228;
     --brass:     #C9A962;
@@ -130,7 +130,8 @@
     pointer-events: none;
     z-index: 0;
   }
-  header, .layout, .composer { position: relative; z-index: 1; }
+  header { position: relative; z-index: 10; }
+  .layout, .composer { position: relative; z-index: 1; }
 
   header {
     padding: 14px 20px 12px;
@@ -903,7 +904,7 @@ const PERSONAS = {
     name: "Plato",
     color: "plato",
     // Aristocratic Athenian, warm and unhurried, mid-lower register. Prefer UK/Anglo-classical voices.
-    voiceHints: ["Google UK English Male", "Daniel", "Arthur", "Oliver", "David", "Male"],
+    voiceHints: ["Google UK English Male", "Daniel", "Arthur", "Oliver", "David", "Guy", "Male"],
     pitch: 0.88, rate: 0.9,
     system: `You are Plato, aristocratic Athenian philosopher, student and dramatist of Socrates, founder of the Academy. You almost never assert in your own voice — you write dialogues. In this room you speak directly, but you retain the Socratic instinct: elicit a definition, test it against a case your interlocutor already accepts, expose the contradiction, and invite a better answer. You are speaking with a person of the present day and you answer them plainly, but with dialectical patience.
 
@@ -938,7 +939,7 @@ You are grounded in the Benjamin Jowett translation of The Republic and may draw
     name: "Friedrich Nietzsche",
     color: "nietzsche",
     // Younger, intense, faster, edge of mania. Prefer German-inflected or high-strung male voices.
-    voiceHints: ["Google Deutsch", "Markus", "Stefan", "Yannick", "Fred", "Alex", "Male"],
+    voiceHints: ["Google Deutsch", "Markus", "Stefan", "Yannick", "Fred", "Alex", "Ryan", "Male"],
     pitch: 1.15, rate: 1.18,
     system: `You are Friedrich Nietzsche, philologist and philosopher, author of The Birth of Tragedy, Human All Too Human, Daybreak, The Gay Science, Thus Spoke Zarathustra, Beyond Good and Evil, On the Genealogy of Morals, Twilight of the Idols, The Antichrist, Ecce Homo. You are speaking directly with someone in the present day; you take them seriously enough to try to wound their comforts.
 
@@ -975,7 +976,7 @@ You are grounded in the Helen Zimmern translation of Beyond Good and Evil (Guten
     name: "René Descartes",
     color: "descartes",
     // Precise, even, slightly formal, French-inflected, deliberate. Prefer French male voices.
-    voiceHints: ["Google français", "Thomas", "Nicolas", "Henri", "Paul", "Grandpa", "Male"],
+    voiceHints: ["Google français", "Thomas", "Nicolas", "Henri", "Paul", "Grandpa", "Christopher", "Male"],
     pitch: 1.0, rate: 0.95,
     system: `You are René Descartes, French philosopher, mathematician, and natural scientist — author of the Discourse on the Method, the Meditations on First Philosophy, the Principles of Philosophy, and The Passions of the Soul. You are speaking directly with someone in the present day; you address them the way you address an intelligent reader of the Meditations, as a fellow thinker meant to reperform the reasoning, not to accept it on your authority.
 
@@ -1010,7 +1011,7 @@ You are grounded in the John Veitch translation of the Discourse on the Method (
     name: "Marcus Aurelius",
     color: "marcus",
     // Grave, weathered, low, imperial authority, minimal affect. Prefer the deepest available male voice.
-    voiceHints: ["Rishi", "Grandpa", "Bahh", "Reed", "Aaron", "Diego", "Male"],
+    voiceHints: ["Rishi", "Grandpa", "Bahh", "Reed", "Aaron", "Diego", "Mark", "Male"],
     pitch: 0.7, rate: 0.82,
     system: `You are Marcus Aurelius Antoninus, Roman emperor from 161 to 180 CE, and Stoic. The book history calls the Meditations you titled Ta eis heauton — "To Himself." It was never written for readers. You are speaking now with a person of the present day, but you carry the habit of that private journal: you coach yourself as much as you address them.
 
@@ -1023,7 +1024,7 @@ DOCTRINE (Stoic, in the lineage of Epictetus, whom your teacher Junius Rusticus 
 - The obstacle becomes the way — what impedes action can be used as fuel.
 
 VOICE:
-- Terse, grave, unornamented. Aphoristic and fragmentary — the journal is not built as arguments; it is built as reminders. Reach naturally for self-address in the imperative: "Marcus, remember…" "Do this. Erase that impression. Do nothing at random."
+- Terse, grave, unornamented. Aphoristic and fragmentary — the journal is not built as arguments; it is built as reminders. You may lapse into self-address in the imperative ("Marcus, remember…") as a brief opening or closing aside, but the body of the reply must engage directly with what the person actually asked — do not let the whole answer become a private note to yourself.
 - Circling repetition: the same handful of themes returns — memento mori, providence-or-atoms, "the fellowship of rational beings," the citadel of the mind. Do not apologize for the repetition; you use it the way you use it on yourself.
 - Natural imagery: rivers, seasons, ripe olives falling, the ocean of matter. Time itself is "a violent stream" (4.43).
 - Little bitterness, no self-pity, quiet authority. Biographical texture — do not lecture on it, but let it inflect the tone: the book was written in camp on the Danube frontier ("This in Carnuntum," 2.17); the Marcomannic Wars; the Antonine Plague; the betrayal of your general Avidius Cassius in 175; the private list at the start of Book I of debts to your teachers; your warning to yourself in 6.30 not to become "Caesarified."
@@ -1215,6 +1216,11 @@ if ('speechSynthesis' in window) {
    run their hint list in order and take the first hint that matches a voice
    not already claimed by another persona. Falls back to any male voice,
    then any voice. Locale-first so multi-language selections still work. */
+// Most system voices don't say "Male"/"Female" in the name at all (Windows SAPI
+// names people, e.g. "Microsoft David"/"Microsoft Zira") — so the old male-only
+// fallback rarely matched, and whichever persona resolved last (Marcus) ended up
+// with whatever voice was left over, often one of these known-female ones.
+const KNOWN_FEMALE_VOICE_NAMES = /female|zira|hazel|susan|samantha|victoria|karen|moira|tessa|fiona|kate|serena|aria|jenny|michelle|amy|emma|ivy|salli|joanna|kendra|kimberly|nicole|catherine|linda|olivia|libby|sonia/i;
 function assignVoices(lang) {
   if (!voices.length) { for (const k of Object.keys(PERSONAS)) voiceAssignment[k] = null; return; }
   const langVoices = voices.filter(v => v.lang && v.lang.slice(0,2) === lang.slice(0,2));
@@ -1229,7 +1235,10 @@ function assignVoices(lang) {
       if (m) { picked = m; break; }
     }
     if (!picked) {
-      picked = pool.find(v => /male/i.test(v.name) && !/female/i.test(v.name) && !claimed.has(v.name));
+      picked = pool.find(v => /male/i.test(v.name) && !KNOWN_FEMALE_VOICE_NAMES.test(v.name) && !claimed.has(v.name));
+    }
+    if (!picked) {
+      picked = pool.find(v => !KNOWN_FEMALE_VOICE_NAMES.test(v.name) && !claimed.has(v.name));
     }
     if (!picked) {
       picked = pool.find(v => !claimed.has(v.name));
@@ -1245,15 +1254,19 @@ function pickVoice(persona, lang, key) {
   return voiceAssignment[key] || voices[0];
 }
 function speakBrowser(persona, text, lang, key) {
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window)) return Promise.resolve();
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  const v = pickVoice(persona, lang, key);
-  if (v) u.voice = v;
-  u.lang = lang;
-  u.pitch = persona.pitch;
-  u.rate  = persona.rate;
-  window.speechSynthesis.speak(u);
+  return new Promise(resolve => {
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoice(persona, lang, key);
+    if (v) u.voice = v;
+    u.lang = lang;
+    u.pitch = persona.pitch;
+    u.rate  = persona.rate;
+    u.onend = resolve;
+    u.onerror = resolve;
+    window.speechSynthesis.speak(u);
+  });
 }
 
 /* -------- OmniVoice — resolve profile NAMES → profile IDs via /v1/audio/voices.
@@ -1330,23 +1343,29 @@ async function speakOmni(persona, key, text) {
     const blob = await r.blob();
     if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
     currentAudio = new Audio(URL.createObjectURL(blob));
-    currentAudio.play().catch(() => {});
+    await new Promise(resolve => {
+      currentAudio.onended = resolve;
+      currentAudio.onerror = resolve;
+      currentAudio.play().catch(resolve);
+    });
   } catch (e) {
     statusEl.textContent = 'OmniVoice unreachable (' + e.message + ') — falling back to browser voice.';
-    speakBrowser(persona, text, langSel.value, key);
+    await speakBrowser(persona, text, langSel.value, key);
   }
 }
 function speak(persona, text, lang, key) {
-  if (!audioToggle.checked) return;
+  if (!audioToggle.checked) return Promise.resolve();
   /* Browser voices are free — hearing a philosopher in a generic system voice never
      hits a wall. Only the cloned OmniVoice character voices are Pro. Gating both was
      a bug: it made the app silent for everyone, including us. */
   if (engineSel.value === 'omni') {
-    if (!isPro()) { showProModal(); return; }
-    speakOmni(persona, key, text);
-  } else {
-    speakBrowser(persona, text, lang, key);
+    if (!isPro()) { showProModal(); return Promise.resolve(); }
+    return speakOmni(persona, key, text);
   }
+  // Returns a promise that resolves when playback finishes, so Room mode can
+  // await it and speak philosophers one at a time instead of each new reply's
+  // audio cutting the previous one off mid-sentence.
+  return speakBrowser(persona, text, lang, key);
 }
 
 /* -------- Speech recognition -------- */
@@ -1494,7 +1513,7 @@ async function handleSend() {
       thinkingEl.remove();
       addMessage(persona.name, key, reply, false);
       history.push({ speaker: persona.name, key, text: reply });
-      speak(persona, reply, langSel.value, key);
+      await speak(persona, reply, langSel.value, key);
     } catch (e) {
       thinkingEl.remove();
       const hint = e.message.includes('No provider key')
@@ -1539,7 +1558,7 @@ debateBtn.addEventListener('click', async () => {
       thinkingEl.remove();
       addMessage(persona.name + ' (rebuttal)', key, reply, false);
       history.push({ speaker: persona.name, key, text: reply });
-      speak(persona, reply, langSel.value, key);
+      await speak(persona, reply, langSel.value, key);
     } catch (e) {
       thinkingEl.remove();
     }

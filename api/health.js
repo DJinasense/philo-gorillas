@@ -76,8 +76,9 @@ module.exports = async function handler(req, res) {
         : null
     },
     database: {
-      // The Vercel/Neon integration used a custom prefix, so the vars are
-      // philo_gorillas_* rather than the usual POSTGRES_*. List whatever landed.
+      // Vercel's "Prisma Postgres" integration uses a custom resource prefix, so
+      // the vars are philo_gorillas_* rather than the usual POSTGRES_*. All three
+      // resolve to Prisma's Accelerate proxy (db.prisma.io) — see api/_db.js.
       detectedVars: Object.keys(process.env)
         .filter(k => /^(philo_gorillas|POSTGRES|DATABASE|NEON)/i.test(k))
         .sort(),
@@ -133,5 +134,32 @@ module.exports = async function handler(req, res) {
   }));
 
   result.summary.live = chain.filter(c => c.live === "OK").length;
+
+  // Actually connect and run a trivial query, rather than just checking presence.
+  if (services.database.connected) {
+    try {
+      const { client, resolveConnectionString } = require("./_db.js");
+      const found = resolveConnectionString();
+      if (found) {
+        try {
+          const u = new URL(found.value);
+          services.database.usingVar = found.name;
+          services.database.protocol = u.protocol;
+          services.database.host = u.hostname;
+        } catch (parseErr) {
+          services.database.urlParseError = String(parseErr.message || parseErr);
+        }
+      }
+      const db = client();
+      const rows = await db.$queryRawUnsafe("SELECT 1 AS ok");
+      services.database.live = rows && rows[0] && rows[0].ok === 1 ? "OK" : "FAIL";
+    } catch (e) {
+      services.database.live = "FAIL";
+      services.database.error = String((e && e.message) || e).slice(0, 300);
+    }
+  } else {
+    services.database.live = "not configured";
+  }
+
   res.status(200).json(result);
 };
