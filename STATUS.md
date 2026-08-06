@@ -1,7 +1,7 @@
 # Four Minds — running status & checklist
 
 Living scratchpad so we can pick up without re-deriving state. Update as things change.
-Last verified: 2026-08-01
+Last verified: 2026-08-05
 
 ## Provider chain (api/ask.js)
 
@@ -283,15 +283,32 @@ deliver to addresses whitelisted under Authorized Recipients.
   convenience for testing both views. Not security — Pro is still just a localStorage
   flag, and stays that way until entitlement is checked server-side.
 
-### Diagnosed, deliberately not yet fixed
-**Sign-in dropdown renders behind the chat.** `#loginDropdown` has `z-index: 500`, which
-looks like it should win but doesn't: line 133 sets `header, .layout, .composer
-{ position: relative; z-index: 1 }`. `header` therefore opens its own stacking context,
-so the dropdown's 500 only competes *inside* the header — and against sibling `.layout`
-at the same z-index 1, the later element in the DOM paints on top. Fix is one line:
-give `header` a higher z-index than `.layout`/`.composer` (e.g. `header { z-index: 10 }`)
-rather than raising the dropdown. Held off 2026-08-01 at user's request — login is
-unbuilt, so the dropdown has nothing behind it yet.
+### Fixed 2026-08-05 (`627f752`): sign-in dropdown stacking-context bug
+Was rendering behind the chat — `header, .layout, .composer` all shared
+`z-index: 1`, so `header`'s own stacking context meant `#loginDropdown`'s `z-index: 500`
+only competed *inside* header, and `.layout` (later in the DOM, same z-index 1 outside)
+painted on top. Fixed exactly as diagnosed: `header { z-index: 10 }`, `.layout, .composer`
+kept at `1`.
+
+### RAG / philosopher library — 1 of 5 sources ingested, rest blocked on quota
+Built 2026-08-05: pgvector 0.8.1 live on the Prisma Postgres instance, `passages` table,
+`api/ingest.js` (idempotent — resumes from `MAX(chunk_index)` per source), `api/_rag.js`
+(chunking + `gemini-embedding-001` embedding via per-item `embedContent` + cosine
+retrieval), wired into `api/ask.js` via `retrievePassages`. All 5 Gutenberg texts chunked
+(~1,938 chunks total).
+
+**Blocker: Gemini free-tier embedding quota is 100 `embedContent` calls/day.** A full
+ingestion run only completed `discourse-method` (Descartes, 78/78 chunks) before every
+subsequent source (`meditations`, `beyond-good-evil`, `zarathustra`, `republic`) failed
+100% of embed attempts with HTTP 429 `RESOURCE_EXHAUSTED`. Not a code bug — the fix
+already in place (per-item calls, since the old batch endpoint was retired) is correct;
+one source's ~78-90 chunks just consumes almost the whole daily allowance.
+
+Options to finish the remaining 4 sources: (a) enable billing on the Gemini API project
+(removes the free-tier cap — user's own billing action), (b) pace ingestion to one source
+per day (~3 more weeks), or (c) use a different embedding provider for this step. Retrieval
+already works today for Descartes; the other three philosophers still answer from their
+system-prompt doctrine summary only, same as before this feature existed.
 
 ### Where "login" stands
 There is still **no account system**. `#formSignUp` / `#formSignIn` render but the submit

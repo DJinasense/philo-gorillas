@@ -814,7 +814,7 @@
         <div class="name">Plato</div>
         <div class="years">c. 428&ndash;348 BCE</div>
         <div class="blurb">Athenian aristocrat, student of Socrates, founder of the Academy. Writes drama, not treatises &mdash; elenchus, Forms, the Cave.</div>
-        <a class="archive-link" href="https://www.gutenberg.org/ebooks/1497" target="_blank" rel="noopener">The Republic (Jowett) &#8599;</a>
+        <a class="archive-link" href="https://en.wikipedia.org/wiki/Plato" target="_blank" rel="noopener">Wikipedia &#8599;</a>
       </div>
     </div>
     <div class="phil-card active" data-p="nietzsche" tabindex="0" role="button" aria-pressed="true">
@@ -823,7 +823,7 @@
         <div class="name">Friedrich Nietzsche</div>
         <div class="years">1844&ndash;1900</div>
         <div class="blurb">Aphoristic, provocative, contemptuous of pity. Genealogy, will to power, eternal recurrence &mdash; writes to wound comforts.</div>
-        <a class="archive-link" href="https://www.gutenberg.org/ebooks/1998" target="_blank" rel="noopener">Zarathustra (Common) &#8599;</a>
+        <a class="archive-link" href="https://en.wikipedia.org/wiki/Friedrich_Nietzsche" target="_blank" rel="noopener">Wikipedia &#8599;</a>
       </div>
     </div>
     <div class="phil-card active" data-p="descartes" tabindex="0" role="button" aria-pressed="true">
@@ -832,7 +832,7 @@
         <div class="name">Ren&eacute; Descartes</div>
         <div class="years">1596&ndash;1650</div>
         <div class="blurb">Meditative first person, geometric method. &ldquo;Cogito ergo sum&rdquo; &mdash; radical doubt, mind/body split, hunts for certainty.</div>
-        <a class="archive-link" href="https://www.gutenberg.org/ebooks/59" target="_blank" rel="noopener">Discourse on the Method (Veitch) &#8599;</a>
+        <a class="archive-link" href="https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes" target="_blank" rel="noopener">Wikipedia &#8599;</a>
       </div>
     </div>
     <div class="phil-card active" data-p="marcus" tabindex="0" role="button" aria-pressed="true">
@@ -841,7 +841,7 @@
         <div class="name">Marcus Aurelius</div>
         <div class="years">121&ndash;180 CE</div>
         <div class="blurb">Roman emperor, private notebook. Second-person imperatives to himself &mdash; virtue, duty, memento mori, endurance.</div>
-        <a class="archive-link" href="https://www.gutenberg.org/ebooks/2680" target="_blank" rel="noopener">Meditations (Casaubon) &#8599;</a>
+        <a class="archive-link" href="https://en.wikipedia.org/wiki/Marcus_Aurelius" target="_blank" rel="noopener">Wikipedia &#8599;</a>
       </div>
     </div>
 
@@ -1362,6 +1362,13 @@ async function refreshOmniProfiles(silent) {
 omniRefresh.addEventListener('click', () => refreshOmniProfiles(false));
 
 let currentAudio = null;
+let speechStopRequested = false;
+function stopSpeaking() {
+  speechStopRequested = true;
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
+  statusEl.textContent = 'Paused.';
+}
 async function speakOmni(persona, key, text) {
   const base = (omniUrl.value || '').trim().replace(/\/$/, '');
   if (!base) {
@@ -1395,7 +1402,7 @@ async function speakOmni(persona, key, text) {
   }
 }
 function speak(persona, text, lang, key) {
-  if (!audioToggle.checked) return Promise.resolve();
+  if (!audioToggle.checked || speechStopRequested) return Promise.resolve();
   /* Browser voices are free — hearing a philosopher in a generic system voice never
      hits a wall. Only the cloned OmniVoice character voices are Pro. Gating both was
      a bug: it made the app silent for everyone, including us. */
@@ -1456,8 +1463,16 @@ function addMessage(speakerLabel, key, text, isUser) {
     replay.type = 'button';
     replay.innerHTML = '<span class="replay-glyph">&#9654;</span> replay';
     replay.setAttribute('aria-label', 'Replay ' + speakerLabel);
-    replay.addEventListener('click', () => speak(PERSONAS[key], text, langSel.value, key));
+    replay.addEventListener('click', () => { speechStopRequested = false; speak(PERSONAS[key], text, langSel.value, key); });
     who.appendChild(replay);
+
+    const pause = document.createElement('button');
+    pause.className = 'replay';
+    pause.type = 'button';
+    pause.innerHTML = '<span class="replay-glyph">&#9208;</span> pause';
+    pause.setAttribute('aria-label', 'Stop ' + speakerLabel + ' speaking');
+    pause.addEventListener('click', stopSpeaking);
+    who.appendChild(pause);
   }
   transcriptEl.appendChild(wrap);
   transcriptEl.scrollTop = transcriptEl.scrollHeight;
@@ -1540,6 +1555,7 @@ async function handleSend() {
   inputEl.value = '';
   autosize();
   lastTopic = text;
+  speechStopRequested = false;
   addMessage('You', null, text, true);
   history.push({ speaker: 'The person', key: null, text });
   sendBtn.disabled = true;
@@ -1585,6 +1601,7 @@ debateBtn.addEventListener('click', async () => {
   const targets = Array.from(activeSet);
   if (targets.length < 2) { statusEl.textContent = 'Bring at least two philosophers into the room to debate.'; return; }
   debateBtn.disabled = true;
+  speechStopRequested = false;
   statusEl.textContent = 'Provoking a debate…';
   for (const key of targets) {
     const persona = PERSONAS[key];

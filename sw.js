@@ -1,4 +1,4 @@
-const CACHE = "four-minds-v6";
+const CACHE = "four-minds-v7";
 const SHELL = [
   "./",
   "./index.html",
@@ -27,7 +27,9 @@ self.addEventListener("activate", (event) => {
 });
 
 // Never cache API calls to the philosophers — always go to the network.
-// Cache-first for the static app shell so the app opens instantly once installed.
+// Network-first for the static app shell: a resumed/restored tab or PWA must
+// never keep serving a JS/HTML version older than what's actually deployed.
+// Cache is only a fallback for offline use, not the primary source.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) {
@@ -35,15 +37,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return (
-        cached ||
-        fetch(event.request).then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-          return res;
-        }).catch(() => cached)
-      );
-    })
+    fetch(event.request).then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+      return res;
+    }).catch(() => caches.match(event.request))
   );
 });
