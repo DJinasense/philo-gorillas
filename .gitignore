@@ -13,3 +13,13 @@ IPA*.txt
 
 .vercel
 .env*
+
+# Raw ebook/audio/video library — source material for scripts/ingest/*.py.
+# Only the extracted plain-text output (data/texts/*.txt) belongs in git.
+TEXTS/
+raw/
+
+# hyperresearch tool state + fetched research notes — local working data
+# (may include copyrighted excerpts pulled from the web); this repo is public.
+.hyperresearch/
+research/
